@@ -1,0 +1,144 @@
+---
+game_modes:
+  test:
+    teams: 1
+    players: 1
+    servers:
+    - address: "jhb1.rsa.tf"
+      port: 27015
+    - address: "jhb1.rsa.tf"
+      port: 27025
+    map_pool:
+    - cp_badlands
+  captain:
+    teams: 1
+    players: 12
+    servers:
+    - name: "Pug 1"
+      address: "jhb1.rsa.tf"
+      port: 27015
+    - name: "Pug 2"
+      address: "jhb1.rsa.tf"
+      port: 27025
+    map_pool:
+    - cp_prolands_rc2p
+    - cp_freight_final1
+    - cp_granary_pro_rc8
+    - cp_gullywash_final1
+    - cp_metalworks
+    - cp_process_final
+    - cp_sunshine
+    - cp_snakewater_final1
+    - cp_reckoner_rc6
+    - cp_villa_b15
+    - koth_product_rcx
+    - koth_clearcut_b15c
+    - cp_logjam_rc12f]
+    - koth_bagel_fall_b7
+  sixes:
+    teams: 2
+    players: 6
+    servers:
+    - name: "Pug 1"
+      address: "jhb1.rsa.tf"
+      port: 27015
+    - name: "Pug 2"
+      address: "jhb1.rsa.tf"
+      port: 27025
+    map_pool:
+    - cp_prolands_rc2p
+    - cp_freight_final1
+    - cp_granary_pro_rc8
+    - cp_gullywash_final1
+    - cp_metalworks
+    - cp_process_final
+    - cp_sunshine
+    - cp_snakewater_final1
+    - cp_reckoner_rc6
+    - cp_villa_b15
+    - koth_product_rcx
+    - koth_clearcut_b15c
+    - cp_logjam_rc12f
+    - koth_bagel_fall_b7
+  prolander:
+    teams: 2
+    players: 7
+    servers:
+    - name: "HL 1"
+      address: "jhb1.rsa.tf"
+      port: 27035
+    - name: "HL 2"
+      address: "jhb1.rsa.tf"
+      port: 27045
+    - name: "HL 3"
+      address: "jhb1.rsa.tf"
+      port: 27055
+    - name: "HL 4"
+      address: "jhb1.rsa.tf"
+      port: 27065
+    map_pool:
+    - cp_badlands
+    - cp_dustbowl
+    - cp_gorge
+    - cp_granary
+    - cp_gravelpit
+    - cp_gullywash_final1
+    - cp_metalworks_rc5
+    - cp_mountainlab
+    - cp_process_final
+    - cp_snakewater_final1
+    - cp_steel
+    - ctf_landfall
+    - ctf_turbine
+    - ctf_well
+    - koth_harvest_final
+    - koth_lakeside_final
+    - koth_ultiduo_r_b7
+    - koth_viaduct
+    - pl_badwater
+    - pl_barnblitz_pro6
+    - pl_borneo
+    - pl_frontier_final
+    - pl_swiftwater_final1
+    - pl_upward
+  highlander:
+    teams: 2
+    players: 9
+    servers:
+    - name: "HL 1"
+      address: "jhb1.rsa.tf"
+      port: 27035
+    - name: "HL 2"
+      address: "jhb1.rsa.tf"
+      port: 27045
+    - name: "HL 3"
+      address: "jhb1.rsa.tf"
+      port: 27055
+    - name: "HL 4"
+      address: "jhb1.rsa.tf"
+      port: 27065
+    map_pool:
+    - cp_badlands
+    - cp_dustbowl
+    - cp_gorge
+    - cp_granary
+    - cp_gravelpit
+    - cp_gullywash_final1
+    - cp_metalworks_rc5
+    - cp_mountainlab
+    - cp_process_final
+    - cp_snakewater_final1
+    - cp_steel
+    - ctf_landfall
+    - ctf_turbine
+    - ctf_well
+    - koth_harvest_final
+    - koth_lakeside_final
+    - koth_ultiduo_r_b7
+    - koth_viaduct
+    - pl_badwater
+    - pl_barnblitz_pro6
+    - pl_borneo
+    - pl_frontier_final
+    - pl_swiftwater_final1
+    - pl_upward
