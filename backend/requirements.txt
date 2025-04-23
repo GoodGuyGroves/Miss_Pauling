@@ -1,6 +1,6 @@
 fastapi==0.104.1
 uvicorn==0.23.2
-python-jose==3.3.0
+python-jose==3.4.0
 httpx==0.24.1
 itsdangerous==2.1.2
 python3-openid==3.2.0
