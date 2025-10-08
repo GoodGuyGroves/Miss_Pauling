@@ -1,0 +1,14 @@
+[Unit]
+Description=TF2 Map Manager
+After=network.target
+
+[Service]
+Type=exec
+User=russ
+WorkingDirectory=/home/russ/Documents/code/tf2-map-manager
+ExecStart=/home/russ/Documents/code/tf2-map-manager/run.sh
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,20 @@
+{
+    "servers": [
+        {
+            "name": "pugA",
+            "tf_dir": "/home/russ/Documents/code/tf2-map-manager/servers/tf2/pugA/tf"
+        },
+        {
+            "name": "pugB",
+            "tf_dir": "/home/russ/Documents/code/tf2-map-manager/servers/tf2/pugB/tf"
+        }
+    ],
+    "maps_dir": "/home/russ/Documents/code/tf2-map-manager/servers/tf2/pugA/tf/maps",
+    "allowed_map_extensions": [".bsp"],
+    "max_map_file_size": 100,
+    "mapcycles": ["pt_official","pt_all"],
+    "cors_origins": ["*"],
+    "cors_methods": ["GET", "POST", "HEAD"],
+    "cors_headers": ["*"],
+    "allowed_hosts": ["tf2.lumabyte.io", "localhost", "127.0.0.1"]
+}

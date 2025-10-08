@@ -1,0 +1,279 @@
+body {
+    font-family: Arial, sans-serif;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background-color: #f0f0f0;
+}
+
+.container {
+    background-color: white;
+    padding: 30px;
+    border-radius: 10px;
+    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+}
+
+h1 {
+    color: #333;
+    text-align: center;
+}
+
+.upload-section {
+    margin: 30px 0;
+    padding: 20px;
+    border: 2px dashed #ccc;
+    border-radius: 5px;
+    text-align: center;
+}
+
+input[type="file"] {
+    margin: 10px 0;
+}
+
+button {
+    background-color: #4CAF50;
+    color: white;
+    padding: 10px 20px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+}
+
+button:hover {
+    background-color: #45a049;
+}
+
+.filter-section {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #f5f5f5;
+    border-radius: 5px;
+}
+
+.filter-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 10px;
+}
+
+.filter-btn {
+    padding: 8px 16px;
+    background-color: #e0e0e0;
+    color: #333;
+    border: none;
+    border-radius: 20px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.filter-btn:hover {
+    background-color: #d0d0d0;
+}
+
+.filter-btn.active {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.map-list {
+    margin-top: 30px;
+}
+
+.map-item {
+    padding: 10px;
+    margin: 5px 0;
+    background-color: #f9f9f9;
+    border-radius: 5px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.map-info {
+    display: flex;
+    flex-direction: column;
+    flex-grow: 1;
+}
+
+.map-main-info {
+    display: flex;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.map-controls {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.mapcycle-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.map-name {
+    font-weight: bold;
+}
+
+.map-type {
+    display: inline-block;
+    padding: 2px 8px;
+    background-color: #e0e0e0;
+    border-radius: 12px;
+    font-size: 12px;
+    margin-left: 10px;
+}
+
+.map-size {
+    color: #666;
+    font-size: 14px;
+}
+
+.message {
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 5px;
+    text-align: center;
+}
+
+.success {
+    background-color: #d4edda;
+    color: #155724;
+    border: 1px solid #c3e6cb;
+}
+
+.error {
+    background-color: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
+}
+
+.warning {
+    background-color: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeaa7;
+}
+
+#progressBar {
+    width: 100%;
+    height: 20px;
+    background-color: #f0f0f0;
+    border-radius: 10px;
+    margin: 10px 0;
+    display: none;
+}
+
+#progressFill {
+    height: 100%;
+    background-color: #4CAF50;
+    border-radius: 10px;
+    width: 0%;
+    transition: width 0.3s;
+}
+
+.upload-results {
+    margin-top: 15px;
+    text-align: left;
+    max-height: 200px;
+    overflow-y: auto;
+}
+
+.upload-result-item {
+    padding: 5px;
+    margin: 2px 0;
+    border-radius: 3px;
+    font-size: 14px;
+}
+
+.upload-success {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.upload-skipped {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.upload-failed {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.directory-listing {
+    font-family: monospace;
+    margin: 20px;
+}
+
+.directory-listing h1 {
+    font-size: 18px;
+    margin-bottom: 10px;
+}
+
+.directory-listing hr {
+    border: none;
+    border-top: 1px solid #ccc;
+    margin: 10px 0;
+}
+
+.directory-listing pre {
+    margin: 0;
+    line-height: 1.4;
+}
+
+.directory-listing pre a {
+    color: #0066cc;
+    text-decoration: none;
+}
+
+.directory-listing pre a:hover {
+    text-decoration: underline;
+}
+
+.mapcycle-checkbox {
+    display: flex;
+    align-items: center;
+    cursor: pointer;
+    font-size: 14px;
+    user-select: none;
+}
+
+.mapcycle-checkbox input[type="checkbox"] {
+    margin-right: 8px;
+    cursor: pointer;
+}
+
+.mapcycle-checkbox input[type="checkbox"]:checked + .checkmark {
+    color: #4CAF50;
+}
+
+.checkmark {
+    font-weight: 500;
+}
+
+.map-actions {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.delete-btn {
+    background-color: transparent;
+    color: #dc3545;
+    border: 1px solid #dc3545;
+    border-radius: 4px;
+    padding: 5px 8px;
+    cursor: pointer;
+    font-size: 14px;
+    transition: all 0.3s;
+}
+
+.delete-btn:hover {
+    background-color: #dc3545;
+    color: white;
+}
