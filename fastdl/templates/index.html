@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1>TF2 Map Manager</h1>
+    
+    <div class="upload-section">
+        <h2>Upload Maps</h2>
+        <form id="uploadForm">
+            <input type="file" id="fileInput" accept=".bsp,.bz2" multiple required>
+            <br>
+            <small style="color: #666;">You can select multiple files. Existing maps will be skipped.</small>
+            <br>
+            <button type="submit">Upload Maps</button>
+        </form>
+        <div id="progressBar">
+            <div id="progressFill"></div>
+        </div>
+        <div id="uploadProgress" style="text-align: center; margin: 10px 0; font-size: 14px;"></div>
+        <div id="message"></div>
+        <div id="uploadResults" class="upload-results"></div>
+    </div>
+    
+    <div class="filter-section">
+        <h3>Filter by Game Mode</h3>
+        <div class="filter-buttons" id="filterButtons">
+            <button class="filter-btn active" data-filter="all">All Maps</button>
+        </div>
+    </div>
+    
+    <div class="map-list">
+        <h2>Current Maps (<span id="mapCount">0</span> total, <span id="filteredCount">0</span> shown)</h2>
+        <div id="mapsList"></div>
+    </div>
+</div>
+{% endblock %}
