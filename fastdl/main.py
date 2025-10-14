@@ -271,11 +271,24 @@ async def login_callback(request: Request, session_token: str = None):
         # Normal redirect without cookie
         return RedirectResponse(url="/")
 
-@app.get("/logout")
-async def logout_redirect(request: Request):
-    """Redirect to main website for logout"""
-    # Redirect to main website logout
-    base_url = str(settings.website_base_url).rstrip('/')
-    website_logout_url = f"{base_url}/auth/logout"
-    return RedirectResponse(url=website_logout_url)
+@app.api_route("/logout", methods=["GET", "POST"])
+async def logout(request: Request, db: Session = Depends(get_db)):
+    """Logout user by clearing session and redirecting back to FastDL"""
+    # Get current session token
+    session_token = request.cookies.get("session_token")
+    if session_token:
+        # Invalidate session in database (shared with main website)
+        from shared.repositories import UserRepository
+        UserRepository.invalidate_session(db, session_token)
+    
+    # Clear session cookie and redirect back to FastDL
+    response = RedirectResponse(url="/?success=Logged out successfully")
+    response.delete_cookie(
+        key="session_token",
+        httponly=True,
+        secure=False,  # Development
+        samesite="lax"
+    )
+    
+    return response
 

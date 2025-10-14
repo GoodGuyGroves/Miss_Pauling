@@ -127,6 +127,24 @@ async def logout(
     
     return response
 
+@router.get("/logout")
+async def logout_get(
+    request: Request,
+    db: Session = Depends(get_db)
+):
+    """Logout user via GET request (for external redirects)"""
+    # Get current session
+    session_token = request.cookies.get("session_token")
+    if session_token:
+        # Invalidate session in database
+        UserRepository.invalidate_session(db, session_token)
+
+    # Clear session cookie and redirect
+    response = RedirectResponse(url="/?success=Logged out successfully")
+    clear_session_cookie(response)
+
+    return response
+
 @router.post("/steam/link")
 async def link_steam_account(
     request: Request,
