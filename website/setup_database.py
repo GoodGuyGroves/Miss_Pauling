@@ -64,7 +64,7 @@ def run_migrations():
 
 def main():
     parser = argparse.ArgumentParser(description='Setup SQLite database for Steam authentication app.')
-    parser.add_argument('--db-path', default='sqlite.db', help='SQLite database file path')
+    parser.add_argument('--db-path', default='../db/sqlite.db', help='SQLite database file path')
     parser.add_argument('--skip-migrations', action='store_true', help='Skip running migrations')
     
     args = parser.parse_args()

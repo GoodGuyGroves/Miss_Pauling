@@ -71,7 +71,7 @@ class Settings(BaseSettings):
         description="The type of DB to use. Defaults to sqlite."
     )
     MISS_PAULING_DB_PATH: Optional[str] = Field(
-        default="sqlite.db",
+        default="../db/sqlite.db",
         description="Path to SQLite database file (required when MISS_PAULING_DB_TYPE is 'sqlite')"
     )
     MISS_PAULING_DB_URL: Optional[str] = Field(
