@@ -3,17 +3,17 @@ from fastapi.responses import RedirectResponse
 from sqlalchemy.orm import Session
 from urllib.parse import urlencode, quote_plus
 
-from app.core.config import settings
-from app.core.sessions import (
+from website.app.core.config import settings
+from website.app.core.sessions import (
     get_current_user_from_session, 
     create_session_cookie, 
     clear_session_cookie,
     validate_csrf_token
 )
-from app.db.database import get_db
-from app.db.repositories import UserRepository
-from app.services import auth_service
-from app.models.auth import OpenIDParams
+from shared.database import get_db
+from shared.repositories import UserRepository
+from website.app.services import auth_service
+from website.app.models.auth import OpenIDParams
 
 
 router = APIRouter(prefix="/auth", tags=["Web Authentication"])
@@ -35,6 +35,7 @@ async def discord_login():
 async def discord_callback(
     request: Request,
     code: str,
+    state: str = None,
     db: Session = Depends(get_db)
 ):
     """Handle Discord OAuth2 callback and create session"""
@@ -67,7 +68,35 @@ async def discord_callback(
         )
         
         # Create response and set session cookie
-        response = RedirectResponse(url="/?success=Login successful")
+        # Check if we should redirect to external service via state parameter
+        external_return = None
+        if state:
+            try:
+                import base64
+                import json
+                # Decode state parameter
+                state_json = base64.urlsafe_b64decode(state.encode()).decode()
+                state_data = json.loads(state_json)
+                external_return = state_data.get("return_to")
+            except Exception as e:
+                print(f"Error decoding state parameter: {e}")
+                # Continue with normal flow if state decoding fails
+        # TODO: Roll back this development vs production hack once pugs.lumabyte.io and fastdl.pugs.lumabyte.io subdomains have propagated
+        # Note to self: make sure newt is forwarding the above subdomains to both the website and fastdl running processes locally
+        if external_return:
+            # For development: pass session token as query param for cross-port auth
+            # For production: this won't be needed due to shared domain cookies
+            from urllib.parse import urlencode, urlparse, parse_qs
+            if settings.environment == "development":
+                # Add session token to the return URL
+                separator = "&" if "?" in external_return else "?"
+                external_return_with_token = f"{external_return}{separator}session_token={user_session.session_token}"
+                response = RedirectResponse(url=external_return_with_token)
+            else:
+                response = RedirectResponse(url=external_return)
+        else:
+            response = RedirectResponse(url="/?success=Login successful")
+        
         create_session_cookie(response, user_session.session_token)
         
         return response
@@ -282,3 +311,37 @@ async def sync_steam_data(
         
     except Exception as e:
         return RedirectResponse(url=f"/profile?error=Steam sync failed: {str(e)}", status_code=303)
+
+@router.get("/redirect-login")
+async def redirect_login(return_to: str = None):
+    """Initiate Discord OAuth2 authentication with return URL for external services"""
+    import base64
+    import json
+    
+    # Use the original callback URL without modifications
+    callback_url = str(settings.DISCORD_CALLBACK_URL)
+    
+    # Create state parameter with return URL
+    state_data = {}
+    if return_to:
+        state_data["return_to"] = return_to
+    
+    # Encode state as base64 JSON (if we have data to encode)
+    state = None
+    if state_data:
+        state_json = json.dumps(state_data)
+        state = base64.urlsafe_b64encode(state_json.encode()).decode()
+    
+    params = {
+        "client_id": settings.DISCORD_APPLICATION_ID,
+        "redirect_uri": callback_url,
+        "response_type": "code",
+        "scope": "identify",
+    }
+    
+    # Add state parameter if we have one
+    if state:
+        params["state"] = state
+    
+    auth_url = f"{settings.DISCORD_OAUTH_URL}?{urlencode(params)}"
+    return RedirectResponse(url=auth_url)

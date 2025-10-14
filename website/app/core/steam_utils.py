@@ -5,7 +5,7 @@ import re
 import httpx
 from datetime import datetime, timezone
 from typing import Dict, Optional, Any
-from app.core.config import get_settings, get_default_headers
+from website.app.core.config import get_settings, get_default_headers
 
 # Get settings for API calls
 settings = get_settings()

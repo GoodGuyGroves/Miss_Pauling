@@ -11,8 +11,8 @@ import sys
 sys.path.append(str(Path(__file__).resolve().parent))
 
 # Import database models
-from app.db.database import engine, Base
-from app.db.models import User, UserSession
+from shared.database import engine, Base
+from shared.models import User, UserSession
 
 def init_db():
     """Create all tables in the database"""
@@ -22,7 +22,7 @@ def init_db():
 
 if __name__ == "__main__":
     # Get the database URL
-    from app.db.database import get_database_url
+    from shared.database import get_database_url
     db_url = get_database_url()
     print(f"Initializing database at: {db_url}")
     

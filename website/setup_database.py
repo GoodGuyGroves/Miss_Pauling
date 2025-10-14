@@ -73,7 +73,7 @@ def main():
         sys.exit(1)
     
     # Update the config file with the database connection details
-    from app.db.database import get_database_url
+    from shared.database import get_database_url
     print(f"Database URL: {get_database_url()}")
     
     if not args.skip_migrations:

@@ -1,10 +1,10 @@
 from fastapi import APIRouter
-from app.core.config import settings
+from website.app.core.config import settings
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi import Request, Depends
 from sqlalchemy.orm import Session
-from app.db.database import get_db
+from shared.database import get_db
 
 # Configure templates and static files
 templates = Jinja2Templates(directory="templates")
@@ -16,7 +16,7 @@ async def profile_page(request: Request, error: str = None, success: str = None,
     """Show user profile page"""
     from sqlalchemy.orm import Session
     from fastapi import Depends
-    from app.core.sessions import get_current_user_from_session, generate_csrf_token, set_csrf_cookie
+    from website.app.core.sessions import get_current_user_from_session, generate_csrf_token, set_csrf_cookie
     
     # Get current user from session
     user = get_current_user_from_session(request, db)

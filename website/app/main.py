@@ -1,3 +1,8 @@
+import sys
+from pathlib import Path
+# Add the repository root to Python path so we can import website and shared modules
+sys.path.append(str(Path(__file__).parent.parent.parent))
+
 from typing import Annotated, Optional
 from fastapi import FastAPI, Request, Depends
 from fastapi.middleware.cors import CORSMiddleware
@@ -6,12 +11,12 @@ from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
-from app.core.config import settings
-from app.routers import auth, profile
-from app.db.database import engine, Base, get_db
-from app.db.models import User
-from app.models.auth import UserInfo
-from app.models.responses import HomePageContext
+from website.app.core.config import settings
+from website.app.routers import auth, profile, api
+from shared.database import engine, Base, get_db
+from shared.models import User
+from website.app.models.auth import UserInfo
+from website.app.models.responses import HomePageContext
 
 # Initialize database tables
 # Comment this out if using Alembic for migrations
@@ -47,7 +52,7 @@ async def root(
     success: Optional[str] = None
 ) -> HTMLResponse:
     """Show home page with login or user dashboard"""
-    from app.core.sessions import get_current_user_from_session, generate_csrf_token, set_csrf_cookie
+    from website.app.core.sessions import get_current_user_from_session, generate_csrf_token, set_csrf_cookie
     
     user_db: User | None = get_current_user_from_session(request, db)
     
@@ -87,3 +92,4 @@ async def root(
 
 app.include_router(profile.router)
 app.include_router(auth.router)
+app.include_router(api.router)

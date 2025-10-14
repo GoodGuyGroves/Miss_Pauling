@@ -1,4 +1,4 @@
-from pydantic import BaseModel, field_validator
+from pydantic import BaseModel, field_validator, HttpUrl
 from typing import List
 import json
 import os
@@ -28,6 +28,7 @@ class Settings(BaseModel):
     cors_methods: List[str]
     cors_headers: List[str]
     allowed_hosts: List[str]
+    website_base_url: HttpUrl = HttpUrl("http://localhost:8000")
     
     @field_validator('maps_dir')
     @classmethod
@@ -37,6 +38,14 @@ class Settings(BaseModel):
             raise ValueError(f"maps_dir path does not exist: {v}")
         if not os.path.isdir(v):
             raise ValueError(f"maps_dir path is not a directory: {v}")
+        return v
+    
+    @field_validator('website_base_url', mode='before')
+    @classmethod
+    def validate_website_base_url(cls, v):
+        # Remove trailing slash before HttpUrl validation
+        if isinstance(v, str):
+            return v.rstrip('/')
         return v
 
 def load_settings() -> Settings:

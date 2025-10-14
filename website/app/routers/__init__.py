@@ -1,5 +1,5 @@
 # from fastapi import APIRouter
-# from app.api.auth import router as auth_router
+# from website.app.api.auth import router as auth_router
 
 # # Main API router that includes all sub-routers
 # api_router = APIRouter()

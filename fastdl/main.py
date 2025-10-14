@@ -1,13 +1,22 @@
-from fastapi import FastAPI, File, UploadFile, HTTPException, Request
-from fastapi.responses import HTMLResponse, FileResponse
+import sys
+from pathlib import Path
+# Add the repository root to Python path so we can import shared modules
+sys.path.append(str(Path(__file__).parent.parent))
+
+from fastapi import FastAPI, File, UploadFile, HTTPException, Request, Depends
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
+from sqlalchemy.orm import Session
+from urllib.parse import urlencode
 import aiofiles
-from pathlib import Path
 from core.config import settings
 from core.mapcycle import mapcycle_manager
+from core.auth import get_current_user, require_auth, AuthenticatedUser
+from shared.database import get_db
+from shared.models import User, UserSession
 
 app = FastAPI()
 
@@ -40,9 +49,9 @@ app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 @app.get("/", response_class=HTMLResponse)
-async def index(request: Request):
+async def index(request: Request, user: AuthenticatedUser = Depends(get_current_user)):
     """Serve the HTML frontend"""
-    return templates.TemplateResponse("index.html", {"request": request})
+    return templates.TemplateResponse("index.html", {"request": request, "user": user})
 
 @app.get("/maps")
 async def list_maps():
@@ -154,8 +163,12 @@ async def serve_map(filename: str):
     )
 
 @app.post("/maps/{filename}/mapcycle")
-async def toggle_map_mapcycle(filename: str, name: str):
-    """Toggle a map's inclusion in a specific mapcycle"""
+async def toggle_map_mapcycle(
+    filename: str, 
+    name: str,
+    user: AuthenticatedUser = Depends(require_auth)
+):
+    """Toggle a map's inclusion in a specific mapcycle (requires authentication)"""
     try:
         maps_path = Path(settings.maps_dir)
         file_path = maps_path / filename
@@ -172,6 +185,10 @@ async def toggle_map_mapcycle(filename: str, name: str):
         
         is_enabled = mapcycle_manager.toggle_map_in_mapcycle(filename, name)
         
+        # Log the mapcycle activity
+        action = "added to" if is_enabled else "removed from"
+        print(f"MAPCYCLE TOGGLE: {filename} {action} {name} mapcycle by user {user.name} (ID: {user.user_id})")
+        
         return {
             "status": "success",
             "filename": filename,
@@ -183,8 +200,11 @@ async def toggle_map_mapcycle(filename: str, name: str):
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.delete("/maps/{filename}")
-async def delete_map(filename: str):
-    """Delete a map file"""
+async def delete_map(
+    filename: str,
+    user: AuthenticatedUser = Depends(require_auth)
+):
+    """Delete a map file (requires authentication)"""
     try:
         maps_path = Path(settings.maps_dir)
         file_path = maps_path / filename
@@ -205,6 +225,9 @@ async def delete_map(filename: str):
         # Delete the file
         file_path.unlink()
         
+        # Log the deletion activity
+        print(f"MAP DELETED: {filename} by user {user.name} (ID: {user.user_id})")
+        
         return {
             "status": "success",
             "filename": filename,
@@ -212,4 +235,46 @@ async def delete_map(filename: str):
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
+
+@app.get("/login")
+async def login_redirect(request: Request):
+    """Redirect to main website for login, with return URL back to FastDL"""
+    # Get the current URL to return to after login
+    return_url = str(request.url_for("login_callback"))
+    
+    # Redirect to main website login with return parameter
+    base_url = str(settings.website_base_url).rstrip('/')
+    website_login_url = f"{base_url}/auth/redirect-login?{urlencode({'return_to': return_url})}"
+    return RedirectResponse(url=website_login_url)
+
+# TODO: Roll back this development vs production hack once pugs.lumabyte.io and fastdl.pugs.lumabyte.io subdomains have propagated
+# Note to self: make sure newt is forwarding the above subdomains to both the website and fastdl running processes locally
+@app.get("/login/callback")
+async def login_callback(request: Request, session_token: str = None):
+    """Handle login callback from main website"""
+    # For development: website can pass session token as query param
+    # For production: this should work via shared domain cookies
+    if session_token:
+        # Set the session cookie on FastDL's domain
+        response = RedirectResponse(url="/")
+        response.set_cookie(
+            key="session_token",
+            value=session_token,
+            httponly=True,
+            secure=False,  # Development
+            samesite="lax",
+            max_age=24 * 7 * 3600  # 1 week
+        )
+        return response
+    else:
+        # Normal redirect without cookie
+        return RedirectResponse(url="/")
+
+@app.get("/logout")
+async def logout_redirect(request: Request):
+    """Redirect to main website for logout"""
+    # Redirect to main website logout
+    base_url = str(settings.website_base_url).rstrip('/')
+    website_logout_url = f"{base_url}/auth/logout"
+    return RedirectResponse(url=website_logout_url)
 

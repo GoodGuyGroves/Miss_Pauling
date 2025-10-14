@@ -2,7 +2,7 @@ from sqlalchemy.orm import Session
 from sqlalchemy import select, or_
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any, Tuple, Literal
-from . import models
+from shared import models
 import uuid
 
 # Auth provider type

@@ -5,12 +5,12 @@ from fastapi import HTTPException, Request
 from sqlalchemy.orm import Session
 from typing import Optional, Dict, Tuple
 
-from app.db.models import User
-from app.db.repositories import UserRepository, AuthProvider
-from app.core.config import settings, get_default_headers
-from app.core.security import serializer, create_token, user_to_response
-from app.models.auth import UserInfo, OpenIDParams, DiscordTokenResponse, DiscordUserResponse, SteamUserData
-from app.core.steam_utils import get_steam_user_data
+from shared.models import User
+from shared.repositories import UserRepository, AuthProvider
+from website.app.core.config import settings, get_default_headers
+from website.app.core.security import serializer, create_token, user_to_response
+from website.app.models.auth import UserInfo, OpenIDParams, DiscordTokenResponse, DiscordUserResponse, SteamUserData
+from website.app.core.steam_utils import get_steam_user_data
 
 
 async def validate_steam_auth(params: OpenIDParams) -> str:

@@ -13,8 +13,8 @@ parent_dir = str(Path(__file__).parent.parent.parent.parent)
 sys.path.append(parent_dir)
 
 # Import our models and database configuration
-from app.db.database import get_database_url, Base
-from app.db.models import User, UserSession  # Import all models here for Alembic to detect
+from shared.database import get_database_url, Base
+from shared.models import User, UserSession  # Import all models here for Alembic to detect
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

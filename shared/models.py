@@ -2,7 +2,7 @@ from sqlalchemy import String, Text, DateTime, Integer, Boolean, ForeignKey
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime, timezone
 from typing import Optional, List
-from .database import Base
+from shared.database import Base
 
 class User(Base):
     """User model for storing user information"""

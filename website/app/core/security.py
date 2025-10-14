@@ -3,11 +3,11 @@ from fastapi import HTTPException, Depends
 from sqlalchemy.orm import Session
 from typing import Optional
 
-from app.core.config import settings
-from app.db.repositories import UserRepository
-from app.db.database import get_db
-# from app.schemas import UserInfo
-from app.models.auth import UserInfo
+from website.app.core.config import settings
+from shared.repositories import UserRepository
+from shared.database import get_db
+# from website.app.schemas import UserInfo
+from website.app.models.auth import UserInfo
 
 # Create serializer for signing data
 serializer = URLSafeSerializer(settings.MISS_PAULING_API_SECRET_KEY.get_secret_value())

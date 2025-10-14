@@ -4,7 +4,7 @@ from typing import List, Optional
 from functools import lru_cache
 
 class Settings(BaseSettings):
-    # Load sensitive values from .env
+    # Load sensitive values from website.app.env
     MISS_PAULING_API_SECRET_KEY: SecretStr = Field(
         description="Key used by Miss Pauling for cryptographic singing and verification of auth tokens. Set it yourself."
     )

@@ -2,19 +2,13 @@ from sqlalchemy import create_engine
 from sqlalchemy.orm import DeclarativeBase, Session
 from pathlib import Path
 from functools import lru_cache
-from app.core.config import settings
 
 def get_database_url():
-    """Get database URL from settings"""
-    # For SQLite, ensure the directory exists
-    if settings.MISS_PAULING_DB_TYPE.lower() == "sqlite" and settings.MISS_PAULING_DB_PATH:
-        db_path = Path(settings.MISS_PAULING_DB_PATH)
-        db_path.parent.mkdir(parents=True, exist_ok=True)
-    
-    if not settings.MISS_PAULING_DB_URL:
-        raise ValueError("Database URL not configured")
-    
-    return settings.MISS_PAULING_DB_URL
+    """Get database URL for shared SQLite database"""
+    # Use the shared database in the db/ folder
+    db_path = Path(__file__).parent.parent / "db" / "sqlite.db"
+    db_path.parent.mkdir(parents=True, exist_ok=True)
+    return f"sqlite:///{db_path}"
 
 @lru_cache()
 def get_engine():

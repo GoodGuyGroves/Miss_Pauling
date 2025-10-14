@@ -3,10 +3,10 @@ from sqlalchemy.orm import Session
 from typing import Optional
 import secrets
 
-from app.core.config import get_settings
-from app.db.repositories import UserRepository
-from app.db.database import get_db
-from app.db.models import User
+from website.app.core.config import get_settings
+from shared.repositories import UserRepository
+from shared.database import get_db
+from shared.models import User
 
 settings = get_settings()
 
@@ -30,6 +30,8 @@ def get_current_user_from_session(request: Request, db: Session) -> Optional[Use
 
 def create_session_cookie(response, session_token: str):
     """Set session cookie on response"""
+    # For production, this should be domain=".pugs.tf"
+    # For development, we'll handle cross-port auth via API calls instead
     response.set_cookie(
         key="session_token",
         value=session_token,
