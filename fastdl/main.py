@@ -15,6 +15,7 @@ import aiofiles
 from core.config import settings
 from core.mapcycle import mapcycle_manager
 from core.auth import get_current_user, require_auth, AuthenticatedUser
+from core.tf2_versions import tf2_sort_key
 from shared.database import get_db
 from shared.models import User, UserSession
 
@@ -69,7 +70,7 @@ async def list_maps():
                     "mapcycles": mapcycle_manager.get_map_mapcycle_status(file_path.name)
                 })
         
-        maps.sort(key=lambda x: x["modified"], reverse=True)
+        maps.sort(key=lambda x: tf2_sort_key(x["name"]))
         return maps
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
@@ -135,7 +136,7 @@ async def browse_maps(request: Request):
             if file_path.is_file() and file_path.suffix.lower() in settings.allowed_map_extensions:
                 files.append(file_path.name)
         
-        files.sort()
+        files.sort(key=tf2_sort_key)
         return templates.TemplateResponse("maps_index.html", {"request": request, "files": files})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))

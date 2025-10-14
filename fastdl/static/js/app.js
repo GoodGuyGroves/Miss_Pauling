@@ -248,7 +248,9 @@ function displayMaps() {
         mapItem.innerHTML = `
             <div class="map-info">
                 <div class="map-main-info">
-                    <span class="map-name">${map.name}</span>
+                    <a href="/tf/maps/${encodeURIComponent(map.name)}" class="map-name-link">
+                        <span class="map-name">${map.name}</span>
+                    </a>
                     ${prefixBadge}
                     <span class="map-size">(${formatFileSize(map.size)})</span>
                 </div>
