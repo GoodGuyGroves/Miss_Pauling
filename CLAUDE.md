@@ -39,44 +39,53 @@ cd website
 alembic revision --autogenerate -m "description"
 # Apply migrations
 alembic upgrade head
-# Initialize database
-python setup_database.py
+# Database is automatically initialized when the website starts
 ```
 
 ## Architecture Overview
 
 ### Website Service Architecture
 - **Authentication**: Discord OAuth (primary) + optional Steam account linking
-- **Database**: SQLite with SQLAlchemy 2.0+ ORM, Alembic migrations
+- **Authorization**: Role-Based Access Control (RBAC) with 6 roles: superadmin, administrator, moderator, helper, captain, user
+- **Database**: SQLite with SQLAlchemy 2.0+ ORM, auto-initialization on startup
 - **Templates**: Server-side Jinja2 rendering with TailwindCSS
 - **Sessions**: HTTP-only cookie-based with CSRF protection
 - **Key principle**: Discord is required auth, Steam is optional linkable
 
 ### FastDL Service Architecture  
 - **File serving**: TF2 map files via `/tf/maps/{filename}` endpoints
-- **Mapcycle management**: Toggle maps in/out of server mapcycle rotations
+- **Mapcycle management**: Toggle maps in/out of server mapcycle rotations (requires helper+ privileges)
+- **Map deletion**: Delete map files (requires helper+ privileges)
 - **Multi-server support**: Manages multiple TF2 server instances
 - **Configuration**: Centralized in `settings.json`
+- **Role integration**: Cross-service authentication with website for role-based permissions
 
 ### Shared Database Schema
 Located in `shared/models.py`:
 - **Users**: Discord ID (required), Steam IDs (optional), profile data
 - **UserSessions**: Active login sessions with expiration
+- **Roles**: Available user roles (superadmin, administrator, moderator, helper, captain, user)
+- **UserRoles**: Many-to-many junction table for user-role assignments
 
 ## Service-Specific Notes
 
 ### Website Service (`website/`)
-- **Entry point**: `app/main.py` 
+- **Entry point**: `app/main.py` (auto-creates database tables and default roles)
 - **Config**: `app/core/config.py` loads from `settings.json`
 - **Auth flow**: `app/routers/auth.py` + `app/services/auth_service.py`
+- **Role system**: `app/core/roles.py` provides decorators and utilities for RBAC
+- **Admin dashboard**: `app/routers/admin.py` provides `/admin` and `/admin/users` management interface
 - **Templates**: Use TailwindCSS classes, minimal vanilla JavaScript
 - **Steam integration**: Always use `steam_id64` as primary identifier
+- **Navigation**: Conditional UI elements based on user roles (`is_admin` template variable)
 
 ### FastDL Service (`fastdl/`)
 - **Entry point**: `main.py`
 - **Map management**: `core/mapcycle.py` handles state persistence
 - **File uploads**: Size validation and extension checking
 - **API endpoints**: RESTful design for map operations
+- **Role enforcement**: `core/auth.py` provides `require_helper_or_above()` dependency
+- **Cross-service auth**: Validates sessions via website API `/api/validate/session`
 
 ### Documentation (`docs/`)
 - **Build**: `mkdocs build` (outputs to `site/`)
@@ -91,6 +100,18 @@ Located in `shared/models.py`:
 - Modern `select()` syntax instead of `query()` methods
 - `datetime.now(timezone.utc)` instead of deprecated `utcnow()`
 
+### Role-Based Access Control (RBAC)
+- **Repository methods**: Use `UserRepository` for role management (`assign_role`, `user_has_role`, etc.)
+- **Route protection**: Use `@require_roles(["admin"])` decorator to protect endpoints
+- **Permission checks**: Use helper functions like `is_admin(user, db)` or `is_moderator_or_above(user, db)`
+- **Auto-assignment**: New users automatically get "user" role on account creation
+- **Role hierarchy**: superadmin (0) > administrator (1) > moderator (2) > helper (3) > captain (4) > user (5)
+- **Admin dashboard**: Access at `/admin` (moderator+ required), user management at `/admin/users`
+- **Role assignment rules**: Users can only assign roles lower in hierarchy than their own highest role
+- **Audit logging**: Role changes are logged to console with format: `ROLE ASSIGNED/REMOVED: User [Admin] assigned/removed 'role' to/from user [Target]`
+- **Cross-service integration**: FastDL service enforces helper+ for map deletion and mapcycle operations
+- **UI integration**: Admin links only visible to moderator+, conditional navigation elements
+
 ### Security Considerations
 - Configuration files with secrets (`settings.json`) are not committed
     - Prefer non-sensitive values in `settings.json` and sensitive values in `.env`
@@ -98,12 +119,50 @@ Located in `shared/models.py`:
 - CSRF tokens on all forms
 - Session-based auth with proper expiration
 
+## Admin Management
+
+### Admin Dashboard Web Interface
+- **Main dashboard**: `/admin` - Overview and navigation (moderator+ required)
+- **User management**: `/admin/users` - List users, assign/remove roles with checkboxes
+- **Real-time updates**: AJAX role assignment without page refresh
+- **Role restrictions**: Can only assign roles lower than own highest role
+- **Self-protection**: Cannot modify own roles via dashboard
+
+### Command Line Admin Tools
+```bash
+# List all users
+python admin_roles.py list-users
+
+# Show user's current roles  
+python admin_roles.py user-roles <user_id>
+
+# Assign role to user
+python admin_roles.py assign <user_id> <role_name>
+
+# Remove role from user
+python admin_roles.py remove <user_id> <role_name>
+
+# Search for users
+python admin_roles.py find-user <search_term>
+```
+
+### API Endpoints
+- **Session validation**: `/api/validate/session` - Returns user info including roles
+- **Role assignment**: `POST /admin/users/assign-role` - Assign/remove roles (CSRF protected)
+- **User data**: `GET /admin/users/data` - Get users list for AJAX updates
+
 ### File Structure
 ```
 Miss_Pauling/
 ├── website/          # Web application with auth
+│   ├── app/routers/admin.py     # Admin dashboard routes
+│   ├── app/models/admin.py      # Admin Pydantic models
+│   ├── app/core/roles.py        # RBAC decorators and utilities
+│   └── templates/admin/         # Admin dashboard templates
 ├── fastdl/          # Map file server
+│   └── core/auth.py            # Role enforcement for FastDL
 ├── docs/            # MkDocs documentation
 ├── shared/          # Common database models
+├── admin_roles.py   # CLI admin tool
 └── requirements.txt # Root dependencies
 ```

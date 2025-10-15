@@ -28,25 +28,36 @@
             <a href="/" class="text-xl font-bold text-blue-600 hover:text-blue-700">Miss Pauling</a>
 
             <div id="nav-content">
-                {% if user %}
-                    <div class="flex items-center gap-4">
-                        <a href="/profile" class="flex items-center transition-opacity hover:opacity-80">
-                            {% if user.avatar %}
-                                <img src="{{ user.avatar }}" alt="User avatar" class="mr-2 h-8 w-8 rounded-full" />
-                            {% endif %}
-                            <span class="font-medium">{{ user.name or 'User' }}</span>
+                <div class="flex items-center gap-4">
+                    <!-- Docs link - always visible -->
+                    <a href="https://www.pugs.tf/docs/getting-started/" 
+                       class="text-sm bg-green-100 text-green-700 px-3 py-1 rounded-full hover:bg-green-200 transition-colors">
+                        📚 Docs
+                    </a>
+                    
+                    {% if user %}
+                        <!-- Admin link - show for moderators and above -->
+                        {% if is_admin %}
+                        <a href="/admin" class="text-sm bg-blue-100 text-blue-700 px-3 py-1 rounded-full hover:bg-blue-200 transition-colors">
+                            🛡️ Admin
                         </a>
+                        {% endif %}
                         <form action="/auth/logout" method="post" style="display: inline;">
                             <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
                             <button type="submit" class="rounded bg-red-500 px-3 py-1 text-sm text-white hover:bg-red-600">
                                 Logout
                             </button>
                         </form>
-                    </div>
-                {% else %}
-                    <div id="loading-spinner" class="spinner" style="display: none;"></div>
-                    <a href="/auth/discord/login" 
-                       class="flex items-center gap-2 rounded bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
+                        <a href="/profile" class="flex items-center transition-opacity hover:opacity-80">
+                            {% if user.avatar %}
+                                <img src="{{ user.avatar }}" alt="User avatar" class="mr-2 h-8 w-8 rounded-full" />
+                            {% endif %}
+                            <span class="font-medium">{{ user.name or 'User' }}</span>
+                        </a>
+                    {% else %}
+                        <div id="loading-spinner" class="spinner" style="display: none;"></div>
+                        <a href="/auth/discord/login" 
+                           class="flex items-center gap-2 rounded bg-indigo-600 px-4 py-2 text-white hover:bg-indigo-700"
                        id="discord-login-btn">
                         <!-- Discord logo SVG -->
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
@@ -54,7 +65,8 @@
                         </svg>
                         Login with Discord
                     </a>
-                {% endif %}
+                    {% endif %}
+                </div>
             </div>
         </div>
     </header>

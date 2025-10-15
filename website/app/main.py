@@ -12,15 +12,37 @@ from fastapi.responses import HTMLResponse
 from sqlalchemy.orm import Session
 
 from website.app.core.config import settings
-from website.app.routers import auth, profile, api
+from website.app.routers import auth, profile, api, admin
 from shared.database import engine, Base, get_db
-from shared.models import User
+from shared.models import User, Role, UserRole, RoleType
 from website.app.models.auth import UserInfo
 from website.app.models.responses import HomePageContext
 
-# Initialize database tables
+# Initialize database tables and default data
 # Comment this out if using Alembic for migrations
 Base.metadata.create_all(bind=engine)
+
+# Create default roles if they don't exist
+from sqlalchemy.orm import sessionmaker
+Session = sessionmaker(bind=engine)
+with Session() as session:
+    existing_roles = session.query(Role).count()
+    if existing_roles == 0:
+        print("Creating default roles...")
+        default_roles = [
+            Role(name=RoleType.SUPERADMIN, description="Super Administrator with full system access"),
+            Role(name=RoleType.ADMINISTRATOR, description="Administrator with system management access"),
+            Role(name=RoleType.MODERATOR, description="Moderator with content management access"),
+            Role(name=RoleType.HELPER, description="Helper with limited support access"),
+            Role(name=RoleType.CAPTAIN, description="Team captain with team management access"),
+            Role(name=RoleType.USER, description="Standard user with basic access"),
+        ]
+        
+        for role in default_roles:
+            session.add(role)
+        
+        session.commit()
+        print(f"Created {len(default_roles)} default roles")
 
 # Create FastAPI application instance
 app = FastAPI(
@@ -60,11 +82,14 @@ async def root(
 ) -> HTMLResponse:
     """Show home page with login or user dashboard"""
     from website.app.core.sessions import get_current_user_from_session, generate_csrf_token, set_csrf_cookie
+    from website.app.core.roles import get_highest_role
+    from website.app.models.admin import get_role_hierarchy
     
     user_db: User | None = get_current_user_from_session(request, db)
     
     # Convert SQLAlchemy user to Pydantic model if the user exists
     user_info = None
+    is_admin = False
     if user_db:
         user_info = UserInfo.model_validate({
             "id": user_db.id,
@@ -77,6 +102,11 @@ async def root(
             "avatar": user_db.avatar_url,
             "auth_providers": []
         })
+        
+        # Check if user has admin privileges (moderator or above)
+        highest_role = get_highest_role(user_db, db)
+        if highest_role:
+            is_admin = get_role_hierarchy(highest_role) <= 2  # moderator or above
     
     csrf_token = generate_csrf_token()
     
@@ -90,6 +120,7 @@ async def root(
     
     response = templates.TemplateResponse("home.html", {
         "request": request,
+        "is_admin": is_admin,
         **context.model_dump()
     })
     
@@ -100,3 +131,4 @@ async def root(
 app.include_router(profile.router)
 app.include_router(auth.router)
 app.include_router(api.router)
+app.include_router(admin.router)

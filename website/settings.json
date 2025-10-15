@@ -1,7 +1,7 @@
 {
     "DISCORD_APPLICATION_ID": "714756410642006067",
     "DISCORD_PUBLIC_KEY": "734d884300f1ac2c546510870b05e85554b25cdcbfa9173fc35920241303fe34",
-    "DISCORD_CALLBACK_URL": "https://pugs.lumabyte.io/auth/discord/callback",
-    "STEAM_OPENID_REALM": "https://pugs.lumabyte.io",
-    "STEAM_OPENID_CALLBACK_URL": "https://pugs.lumabyte.io/auth/steam/callback"
+    "DISCORD_CALLBACK_URL": "https://www.pugs.tf/auth/discord/callback",
+    "STEAM_OPENID_REALM": "https://www.pugs.tf",
+    "STEAM_OPENID_CALLBACK_URL": "https://www.pugs.tf/auth/steam/callback"
 }

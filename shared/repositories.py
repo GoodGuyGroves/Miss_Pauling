@@ -1,7 +1,7 @@
 from sqlalchemy.orm import Session
 from sqlalchemy import select, or_
 from datetime import datetime, timedelta, timezone
-from typing import Optional, Dict, Any, Tuple, Literal
+from typing import Optional, Dict, Any, Tuple, Literal, List
 from shared import models
 import uuid
 
@@ -83,6 +83,10 @@ class UserRepository:
         db.add(user)
         db.commit()
         db.refresh(user)
+        
+        # Automatically assign "user" role to new users
+        UserRepository.assign_role(db, user.id, "user")
+        
         return user
     
     @staticmethod
@@ -235,3 +239,112 @@ class UserRepository:
         db.commit()
         db.refresh(user)
         return user, True, requires_logout
+
+    # Role Management Methods
+    
+    @staticmethod
+    def get_user_roles(db: Session, user_id: int) -> List[models.Role]:
+        """Get all roles for a user"""
+        return db.scalars(
+            select(models.Role)
+            .join(models.UserRole)
+            .where(models.UserRole.user_id == user_id)
+        ).all()
+    
+    @staticmethod
+    def user_has_role(db: Session, user_id: int, role_name: str) -> bool:
+        """Check if a user has a specific role"""
+        from shared.models import RoleType
+        try:
+            role_type = RoleType(role_name)
+        except ValueError:
+            return False
+            
+        return db.scalar(
+            select(models.UserRole)
+            .join(models.Role)
+            .where(
+                models.UserRole.user_id == user_id,
+                models.Role.name == role_type
+            )
+        ) is not None
+    
+    @staticmethod
+    def assign_role(
+        db: Session, 
+        user_id: int, 
+        role_name: str, 
+        assigned_by_user_id: Optional[int] = None
+    ) -> bool:
+        """Assign a role to a user"""
+        from shared.models import RoleType
+        try:
+            role_type = RoleType(role_name)
+        except ValueError:
+            return False
+        
+        # Get the role
+        role = db.scalar(select(models.Role).where(models.Role.name == role_type))
+        if not role:
+            return False
+        
+        # Check if user already has this role
+        existing = db.scalar(
+            select(models.UserRole).where(
+                models.UserRole.user_id == user_id,
+                models.UserRole.role_id == role.id
+            )
+        )
+        if existing:
+            return True  # Already has role
+        
+        # Assign the role
+        user_role = models.UserRole(
+            user_id=user_id,
+            role_id=role.id,
+            assigned_by=assigned_by_user_id
+        )
+        db.add(user_role)
+        db.commit()
+        return True
+    
+    @staticmethod
+    def remove_role(db: Session, user_id: int, role_name: str) -> bool:
+        """Remove a role from a user"""
+        from shared.models import RoleType
+        try:
+            role_type = RoleType(role_name)
+        except ValueError:
+            return False
+        
+        # Find and remove the user role
+        user_role = db.scalar(
+            select(models.UserRole)
+            .join(models.Role)
+            .where(
+                models.UserRole.user_id == user_id,
+                models.Role.name == role_type
+            )
+        )
+        
+        if user_role:
+            db.delete(user_role)
+            db.commit()
+            return True
+        return False
+    
+    @staticmethod
+    def get_role_by_name(db: Session, role_name: str) -> Optional[models.Role]:
+        """Get a role by name"""
+        from shared.models import RoleType
+        try:
+            role_type = RoleType(role_name)
+        except ValueError:
+            return None
+        
+        return db.scalar(select(models.Role).where(models.Role.name == role_type))
+    
+    @staticmethod
+    def get_all_roles(db: Session) -> List[models.Role]:
+        """Get all available roles"""
+        return db.scalars(select(models.Role)).all()

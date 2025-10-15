@@ -1,7 +1,8 @@
-from sqlalchemy import String, Text, DateTime, Integer, Boolean, ForeignKey
+from sqlalchemy import String, Text, DateTime, Integer, Boolean, ForeignKey, Enum
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 from datetime import datetime, timezone
 from typing import Optional, List
+from enum import Enum as PyEnum
 from shared.database import Base
 
 class User(Base):
@@ -25,6 +26,9 @@ class User(Base):
     
     # Relationship to user sessions
     sessions: Mapped[List["UserSession"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    
+    # Relationship to user roles
+    user_roles: Mapped[List["UserRole"]] = relationship(back_populates="user", foreign_keys="[UserRole.user_id]", cascade="all, delete-orphan")
     
     def __repr__(self):
         identifiers = []
@@ -55,3 +59,48 @@ class UserSession(Base):
     
     def __repr__(self):
         return f"<UserSession(id={self.id}, user_id={self.user_id}, provider={self.provider}, active={self.is_active})>"
+
+
+class RoleType(PyEnum):
+    """Enumeration of available user roles"""
+    SUPERADMIN = "superadmin"
+    ADMINISTRATOR = "administrator"
+    MODERATOR = "moderator"
+    HELPER = "helper"
+    CAPTAIN = "captain"
+    USER = "user"
+
+
+class Role(Base):
+    """Role model for defining user roles"""
+    __tablename__ = "roles"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    name: Mapped[RoleType] = mapped_column(Enum(RoleType), unique=True, index=True)
+    description: Mapped[Optional[str]] = mapped_column(Text)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    
+    # Relationship to user roles
+    user_roles: Mapped[List["UserRole"]] = relationship(back_populates="role", cascade="all, delete-orphan")
+    
+    def __repr__(self):
+        return f"<Role(id={self.id}, name={self.name.value})>"
+
+
+class UserRole(Base):
+    """Junction table for user-role many-to-many relationship"""
+    __tablename__ = "user_roles"
+    
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, index=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id"), index=True)
+    role_id: Mapped[int] = mapped_column(ForeignKey("roles.id"), index=True)
+    assigned_at: Mapped[datetime] = mapped_column(DateTime, default=lambda: datetime.now(timezone.utc))
+    assigned_by: Mapped[Optional[int]] = mapped_column(ForeignKey("users.id"))  # User who assigned this role
+    
+    # Relationships
+    user: Mapped["User"] = relationship(back_populates="user_roles", foreign_keys=[user_id])
+    role: Mapped["Role"] = relationship(back_populates="user_roles")
+    assigned_by_user: Mapped[Optional["User"]] = relationship(foreign_keys=[assigned_by])
+    
+    def __repr__(self):
+        return f"<UserRole(id={self.id}, user_id={self.user_id}, role_id={self.role_id})>"

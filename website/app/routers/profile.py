@@ -24,6 +24,15 @@ async def profile_page(request: Request, error: str = None, success: str = None,
     if not user:
         return RedirectResponse(url="/?error=Authentication required")
     
+    # Check if user has admin privileges
+    from website.app.core.roles import get_highest_role
+    from website.app.models.admin import get_role_hierarchy
+    
+    highest_role = get_highest_role(user, db)
+    is_admin = False
+    if highest_role:
+        is_admin = get_role_hierarchy(highest_role) <= 2  # moderator or above
+    
     # Generate CSRF token for forms
     csrf_token = generate_csrf_token()
     
@@ -32,7 +41,8 @@ async def profile_page(request: Request, error: str = None, success: str = None,
         "user": user,
         "error": error,
         "success": success,
-        "csrf_token": csrf_token
+        "csrf_token": csrf_token,
+        "is_admin": is_admin
     })
     
     # Set CSRF token cookie

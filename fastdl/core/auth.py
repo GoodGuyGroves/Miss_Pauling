@@ -1,5 +1,5 @@
 import httpx
-from typing import Optional
+from typing import Optional, List
 from fastapi import HTTPException, Request
 from pydantic import BaseModel
 from .config import settings
@@ -10,6 +10,7 @@ class AuthenticatedUser(BaseModel):
     name: Optional[str] = None
     discord_id: Optional[str] = None
     steam_id64: Optional[str] = None
+    roles: List[str] = []
     is_authenticated: bool = True
 
 class AuthClient:
@@ -77,4 +78,42 @@ async def require_auth(request: Request) -> AuthenticatedUser:
     user = await auth_client.get_current_user(request)
     if not user:
         raise HTTPException(status_code=401, detail="Authentication required")
+    return user
+
+
+def get_role_hierarchy(role_name: str) -> int:
+    """Get hierarchy level for a role (lower number = higher privilege)"""
+    hierarchy = {
+        "superadmin": 0,
+        "administrator": 1,
+        "moderator": 2,
+        "helper": 3,
+        "captain": 4,
+        "user": 5
+    }
+    return hierarchy.get(role_name.lower(), 999)
+
+
+def user_has_role_level(user: AuthenticatedUser, required_level: int) -> bool:
+    """Check if user has a role at the required level or higher"""
+    if not user.roles:
+        return False
+    
+    user_highest_level = min(get_role_hierarchy(role) for role in user.roles)
+    return user_highest_level <= required_level
+
+
+async def require_helper_or_above(request: Request) -> AuthenticatedUser:
+    """
+    FastAPI dependency that requires helper role or above
+    Raises 403 HTTPException if insufficient privileges
+    """
+    user = await require_auth(request)
+    
+    if not user_has_role_level(user, 3):  # helper level = 3
+        raise HTTPException(
+            status_code=403, 
+            detail="Helper privileges or above required for this action"
+        )
+    
     return user

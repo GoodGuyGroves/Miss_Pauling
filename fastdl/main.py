@@ -14,7 +14,7 @@ from urllib.parse import urlencode
 import aiofiles
 from core.config import settings
 from core.mapcycle import mapcycle_manager
-from core.auth import get_current_user, require_auth, AuthenticatedUser
+from core.auth import get_current_user, require_auth, require_helper_or_above, AuthenticatedUser
 from core.tf2_versions import tf2_sort_key
 from shared.database import get_db
 from shared.models import User, UserSession
@@ -167,7 +167,7 @@ async def serve_map(filename: str):
 async def toggle_map_mapcycle(
     filename: str, 
     name: str,
-    user: AuthenticatedUser = Depends(require_auth)
+    user: AuthenticatedUser = Depends(require_helper_or_above)
 ):
     """Toggle a map's inclusion in a specific mapcycle (requires authentication)"""
     try:
@@ -203,7 +203,7 @@ async def toggle_map_mapcycle(
 @app.delete("/maps/{filename}")
 async def delete_map(
     filename: str,
-    user: AuthenticatedUser = Depends(require_auth)
+    user: AuthenticatedUser = Depends(require_helper_or_above)
 ):
     """Delete a map file (requires authentication)"""
     try:

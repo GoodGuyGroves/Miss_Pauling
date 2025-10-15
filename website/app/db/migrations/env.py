@@ -8,13 +8,14 @@ from sqlalchemy import pool
 
 from alembic import context
 
-# Add the parent directory to sys.path to allow imports from the app package
-parent_dir = str(Path(__file__).parent.parent.parent.parent)
-sys.path.append(parent_dir)
+# Add the parent directory to sys.path to allow imports from the app package and shared module
+# From migrations/env.py, go up to Miss_Pauling root: migrations -> db -> app -> website -> Miss_Pauling
+root_dir = str(Path(__file__).parent.parent.parent.parent.parent)
+sys.path.append(root_dir)
 
 # Import our models and database configuration
 from shared.database import get_database_url, Base
-from shared.models import User, UserSession  # Import all models here for Alembic to detect
+from shared.models import User, UserSession, Role, UserRole, RoleType  # Import all models here for Alembic to detect
 
 # this is the Alembic Config object, which provides
 # access to the values within the .ini file in use.

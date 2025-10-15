@@ -1,0 +1,246 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Admin Header -->
+    <div class="bg-white shadow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div class="flex items-center">
+                    <h1 class="text-3xl font-bold text-gray-900">User Management</h1>
+                    <span class="ml-4 px-3 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                        {{ current_user_roles[0]|title if current_user_roles else "User" }}
+                    </span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/admin" class="text-blue-600 hover:text-blue-500">
+                        ← Back to Dashboard
+                    </a>
+                    <a href="/" class="text-blue-600 hover:text-blue-500">
+                        Home
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- Status Messages -->
+        <div id="status-message" class="hidden mb-6">
+            <div class="rounded-md p-4" id="status-content">
+                <div class="flex">
+                    <div class="ml-3">
+                        <p class="text-sm font-medium" id="status-text"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Users Table -->
+        <div class="bg-white shadow overflow-hidden sm:rounded-md">
+            <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">
+                    Users ({{ users|length }})
+                </h3>
+                <p class="mt-1 max-w-2xl text-sm text-gray-500">
+                    Manage user roles and permissions. You can assign roles that are lower than your own.
+                </p>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                User
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Discord ID
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Steam ID
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Current Roles
+                            </th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                                Role Management
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        {% for user_item in users %}
+                        <tr class="hover:bg-gray-50" data-user-id="{{ user_item.id }}">
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex items-center">
+                                    {% if user_item.avatar_url %}
+                                    <img class="h-10 w-10 rounded-full" src="{{ user_item.avatar_url }}" alt="">
+                                    {% else %}
+                                    <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
+                                        <span class="text-sm font-medium text-gray-700">
+                                            {{ (user_item.name or 'U')[0]|upper }}
+                                        </span>
+                                    </div>
+                                    {% endif %}
+                                    <div class="ml-4">
+                                        <div class="text-sm font-medium text-gray-900">
+                                            {{ user_item.name or "Unknown User" }}
+                                        </div>
+                                        <div class="text-sm text-gray-500">
+                                            ID: {{ user_item.id }}
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ user_item.discord_id or "N/A" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                                {{ user_item.steam_id64 or "N/A" }}
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap">
+                                <div class="flex flex-wrap gap-1">
+                                    {% for role in user_item.roles %}
+                                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium
+                                        {% if role.name == 'superadmin' %}bg-red-100 text-red-800
+                                        {% elif role.name == 'administrator' %}bg-purple-100 text-purple-800
+                                        {% elif role.name == 'moderator' %}bg-blue-100 text-blue-800
+                                        {% elif role.name == 'helper' %}bg-green-100 text-green-800
+                                        {% elif role.name == 'captain' %}bg-yellow-100 text-yellow-800
+                                        {% else %}bg-gray-100 text-gray-800{% endif %}">
+                                        {{ role.name|title }}
+                                    </span>
+                                    {% endfor %}
+                                    {% if not user_item.roles %}
+                                    <span class="text-sm text-gray-500 italic">No roles</span>
+                                    {% endif %}
+                                </div>
+                            </td>
+                            <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                                {% if can_assign_roles and user_item.id != user.id %}
+                                <div class="space-y-2">
+                                    {% for role in available_roles %}
+                                    <label class="flex items-center space-x-2">
+                                        <input type="checkbox" 
+                                               class="role-checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500"
+                                               data-user-id="{{ user_item.id }}"
+                                               data-role-name="{{ role.name }}"
+                                               {% if role.name in (user_item.roles | map(attribute='name') | list) %}checked{% endif %}>
+                                        <span class="text-sm text-gray-700">{{ role.name|title }}</span>
+                                    </label>
+                                    {% endfor %}
+                                    {% if not available_roles %}
+                                    <span class="text-sm text-gray-500 italic">No roles available to assign</span>
+                                    {% endif %}
+                                </div>
+                                {% elif user_item.id == user.id %}
+                                <span class="text-sm text-gray-500 italic">Cannot modify own roles</span>
+                                {% else %}
+                                <span class="text-sm text-gray-500 italic">Insufficient permissions</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                        {% if not users %}
+                        <tr>
+                            <td colspan="5" class="px-6 py-4 text-center text-sm text-gray-500">
+                                No users found.
+                            </td>
+                        </tr>
+                        {% endif %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Loading Indicator -->
+        <div id="loading" class="hidden fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full">
+            <div class="relative top-20 mx-auto p-5 border w-96 shadow-lg rounded-md bg-white">
+                <div class="mt-3 text-center">
+                    <div class="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-blue-100">
+                        <svg class="animate-spin h-6 w-6 text-blue-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                    </div>
+                    <h3 class="text-lg font-medium text-gray-900 mt-2">Processing...</h3>
+                    <p class="text-sm text-gray-500 mt-1">Updating user roles</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('.role-checkbox');
+    const statusMessage = document.getElementById('status-message');
+    const statusContent = document.getElementById('status-content');
+    const statusText = document.getElementById('status-text');
+    const loading = document.getElementById('loading');
+    
+    function showStatus(message, isSuccess = true) {
+        statusContent.className = `rounded-md p-4 ${isSuccess ? 'bg-green-50' : 'bg-red-50'}`;
+        statusText.className = `text-sm font-medium ${isSuccess ? 'text-green-800' : 'text-red-800'}`;
+        statusText.textContent = message;
+        statusMessage.classList.remove('hidden');
+        
+        // Auto-hide after 5 seconds
+        setTimeout(() => {
+            statusMessage.classList.add('hidden');
+        }, 5000);
+    }
+    
+    function showLoading() {
+        loading.classList.remove('hidden');
+    }
+    
+    function hideLoading() {
+        loading.classList.add('hidden');
+    }
+    
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', async function() {
+            const userId = this.getAttribute('data-user-id');
+            const roleName = this.getAttribute('data-role-name');
+            const isChecked = this.checked;
+            const action = isChecked ? 'assign' : 'remove';
+            
+            showLoading();
+            
+            try {
+                const formData = new FormData();
+                formData.append('user_id', userId);
+                formData.append('role_name', roleName);
+                formData.append('action', action);
+                formData.append('csrf_token', '{{ csrf_token }}');
+                
+                const response = await fetch('/admin/users/assign-role', {
+                    method: 'POST',
+                    body: formData
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    showStatus(result.message, true);
+                } else {
+                    showStatus(result.message, false);
+                    // Revert checkbox state on failure
+                    this.checked = !isChecked;
+                }
+            } catch (error) {
+                console.error('Error:', error);
+                showStatus('An error occurred while updating the role.', false);
+                // Revert checkbox state on error
+                this.checked = !isChecked;
+            } finally {
+                hideLoading();
+            }
+        });
+    });
+});
+</script>
+{% endblock %}

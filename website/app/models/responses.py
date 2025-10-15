@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict
-from typing import Optional
+from typing import Optional, List
 from website.app.models.auth import UserInfo
 
 class HomePageContext(BaseModel):
@@ -17,6 +17,7 @@ class UserValidationResponse(BaseModel):
     name: Optional[str] = None
     discord_id: Optional[str] = None
     steam_id64: Optional[str] = None
+    roles: List[str] = []
     is_authenticated: bool = True
     
     model_config = ConfigDict(from_attributes=True)
