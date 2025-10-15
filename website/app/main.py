@@ -26,7 +26,10 @@ Base.metadata.create_all(bind=engine)
 app = FastAPI(
     title="Miss Pauling",
     description="A minimal FastAPI application with Steam and Discord authentication",
-    version="0.1.0"
+    version="0.1.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json"
 )
 
 # Configure templates and static files
