@@ -16,6 +16,6 @@
     "cors_origins": ["*"],
     "cors_methods": ["GET", "POST", "HEAD"],
     "cors_headers": ["*"],
-    "allowed_hosts": ["fastdl.pugs.lumabyte.io", "pugs.lumabyte.io", "localhost", "127.0.0.1"],
-    "website_base_url": "https://pugs.lumabyte.io"
+    "allowed_hosts": ["fastdl.pugs.tf", "www.pugs.tf", "pugs.tf", "localhost", "127.0.0.1"],
+    "website_base_url": "https://www.pugs.tf"
 }
