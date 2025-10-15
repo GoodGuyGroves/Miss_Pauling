@@ -1,0 +1,25 @@
+site_name: pugs.tf docs
+site_dir: 'site'
+docs_dir: 'content'
+# The above should create the following:
+# Miss_Pauling/
+# └── docs/
+#     ├── mkdocs.yml
+#     ├── content/      # Your markdown files
+#     └── site/         # Built output
+theme: material
+markdown_extensions:
+  - toc:
+      permalink: "#"
+      baselevel: 2
+      separator: "_"
+nav:
+  - Home: https://www.pugs.tf
+  - Getting Started: getting-started.md
+  - Guides:
+    - Basic Defence: guides/basic-defence/index.md
+  - Admin:
+    - VPS Administration: admin/vps-admin.md
+    - In-game Administration: admin/ingame-admin.md
+    - Map Management: admin/map-management/index.md
+    - Server Configs: admin/server-configs.md

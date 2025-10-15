@@ -36,6 +36,10 @@ app = FastAPI(
 templates = Jinja2Templates(directory="templates")
 app.mount("/static", StaticFiles(directory="static"), name="static")
 
+# Add mkdocs to /docs
+docs_path = Path(__file__).parent.parent.parent / "docs" / "site"
+app.mount("/docs", StaticFiles(directory=str(docs_path), html=True), name="docs")
+
 # Add CORS middleware to allow requests from the frontend
 app.add_middleware(
     CORSMiddleware,
