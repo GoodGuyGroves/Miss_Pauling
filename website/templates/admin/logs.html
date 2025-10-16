@@ -1,0 +1,408 @@
+{% extends "base.html" %}
+
+{% block title %}{{ page_title }}{% endblock %}
+
+{% block content %}
+<div class="min-h-screen bg-gray-50">
+    <!-- Admin Header -->
+    <div class="bg-white shadow">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center py-6">
+                <div class="flex items-center">
+                    <h1 class="text-3xl font-bold text-gray-900">Server Logs</h1>
+                    <span class="ml-4 px-3 py-1 text-xs font-medium bg-blue-100 text-blue-800 rounded-full">
+                        {{ highest_role|title }}
+                    </span>
+                </div>
+                <div class="flex items-center space-x-4">
+                    <a href="/admin" class="text-blue-600 hover:text-blue-500">
+                        ← Back to Dashboard
+                    </a>
+                    <a href="/" class="text-blue-600 hover:text-blue-500">
+                        Home
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- Main Content Card -->
+        <div class="bg-white shadow overflow-hidden sm:rounded-md">
+            <div class="px-4 py-5 sm:px-6 border-b border-gray-200">
+                <h3 class="text-lg leading-6 font-medium text-gray-900">
+                    System Services
+                </h3>
+                <p class="mt-1 max-w-2xl text-sm text-gray-500">
+                    Monitor real-time systemd service logs and manage service restarts.
+                </p>
+            </div>
+
+            <div class="px-4 py-5 sm:px-6">
+                <!-- Service Tabs -->
+                <div class="mb-4">
+                    <div class="bg-gray-100 rounded-t-lg p-1">
+                        <nav class="flex space-x-1">
+                            {% for service_key, service_config in systemd_services.items() %}
+                            <button 
+                                class="service-tab relative px-4 py-2 rounded-t-lg font-medium text-sm transition-all duration-200 bg-gray-200 text-gray-600 hover:bg-gray-300 hover:text-gray-800 border border-gray-300 border-b-0"
+                                data-service="{{ service_key }}"
+                                data-display-name="{{ service_config.display_name }}"
+                            >
+                                <span class="flex items-center">
+                                    <span class="w-2 h-2 bg-gray-400 rounded-full mr-2 service-indicator"></span>
+                                    {{ service_config.display_name }}
+                                </span>
+                            </button>
+                            {% endfor %}
+                        </nav>
+                    </div>
+                </div>
+
+                <!-- Connection Status -->
+                <div id="connection-status" class="mb-4 p-4 rounded-md bg-gray-50 border border-gray-200">
+                    <div class="flex items-center">
+                        <div id="status-indicator" class="w-3 h-3 rounded-full bg-gray-400 mr-3"></div>
+                        <span id="status-text" class="text-sm text-gray-600">Select a service to start streaming logs</span>
+                    </div>
+                </div>
+
+                <!-- Log Output Container -->
+                <div class="bg-black rounded-b-lg rounded-tr-lg p-4 h-96 overflow-y-auto border border-gray-300 border-t-0">
+                    <div id="log-output" class="font-mono text-sm text-green-400 whitespace-pre-wrap"></div>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="mt-4 flex justify-between items-center">
+                    <div class="flex items-center space-x-4">
+                        <button id="clear-logs" class="bg-gray-600 hover:bg-gray-700 text-white px-4 py-2 rounded-md text-sm font-medium">
+                            Clear Logs
+                        </button>
+                        <label class="flex items-center space-x-2 text-sm text-gray-700">
+                            <input type="checkbox" id="watch-checkbox" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500" checked>
+                            <span>Watch (auto-scroll)</span>
+                        </label>
+                    </div>
+                    <button id="restart-service" class="bg-orange-600 hover:bg-orange-700 text-white px-4 py-2 rounded-md text-sm font-medium disabled:bg-gray-400 disabled:cursor-not-allowed" disabled>
+                        Restart Service
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+    <script>
+        class LogsPage {
+            constructor() {
+                this.websocket = null;
+                this.currentService = null;
+                this.watchEnabled = true; // Default to watching enabled
+                this.initializeElements();
+                this.attachEventListeners();
+            }
+
+            initializeElements() {
+                this.logOutput = document.getElementById('log-output');
+                this.logContainer = this.logOutput.parentElement; // The scrollable container
+                this.statusIndicator = document.getElementById('status-indicator');
+                this.statusText = document.getElementById('status-text');
+                this.clearLogsButton = document.getElementById('clear-logs');
+                this.restartServiceButton = document.getElementById('restart-service');
+                this.watchCheckbox = document.getElementById('watch-checkbox');
+                this.serviceTabs = document.querySelectorAll('.service-tab');
+            }
+
+            attachEventListeners() {
+                // Service tab clicks
+                this.serviceTabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        const serviceName = tab.getAttribute('data-service');
+                        const displayName = tab.getAttribute('data-display-name');
+                        
+                        // If clicking on the already active service, deactivate it
+                        if (this.currentService === serviceName) {
+                            this.deactivateService();
+                        } else {
+                            this.switchService(serviceName, displayName);
+                        }
+                    });
+                });
+
+                // Clear logs button
+                this.clearLogsButton.addEventListener('click', () => {
+                    this.clearLogs();
+                });
+
+                // Restart service button
+                this.restartServiceButton.addEventListener('click', () => {
+                    this.restartService();
+                });
+
+                // Watch checkbox
+                this.watchCheckbox.addEventListener('change', (e) => {
+                    this.watchEnabled = e.target.checked;
+                    
+                    // If watch is enabled and there are logs, scroll to bottom
+                    if (this.watchEnabled && this.logOutput.children.length > 0) {
+                        this.scrollToBottom();
+                    }
+                });
+
+                // Handle page unload
+                window.addEventListener('beforeunload', () => {
+                    this.disconnect();
+                });
+            }
+
+            switchService(serviceName, displayName) {
+                // Update active tab styling
+                this.serviceTabs.forEach(tab => {
+                    tab.classList.remove('bg-white', 'text-gray-900', 'border-gray-300', 'shadow-sm', 'z-10');
+                    tab.classList.add('bg-gray-200', 'text-gray-600', 'border-gray-300');
+                    
+                    // Reset service indicator
+                    const indicator = tab.querySelector('.service-indicator');
+                    if (indicator) {
+                        indicator.classList.remove('bg-green-500', 'bg-yellow-500', 'bg-red-500');
+                        indicator.classList.add('bg-gray-400');
+                    }
+                });
+                
+                const activeTab = document.querySelector(`[data-service="${serviceName}"]`);
+                activeTab.classList.remove('bg-gray-200', 'text-gray-600');
+                activeTab.classList.add('bg-white', 'text-gray-900', 'border-gray-300', 'shadow-sm', 'z-10');
+
+                // Disconnect existing connection
+                this.disconnect();
+                
+                // Clear logs and connect to new service
+                this.clearLogs();
+                this.connectToService(serviceName, displayName);
+                
+                // Enable restart button
+                this.restartServiceButton.disabled = false;
+            }
+
+            connectToService(serviceName, displayName) {
+                this.currentService = serviceName;
+                this.updateStatus('connecting', `Connecting to ${displayName}...`);
+
+                const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+                const wsUrl = `${protocol}//${window.location.host}/admin/logs/stream/${serviceName}`;
+                
+                this.websocket = new WebSocket(wsUrl);
+
+                this.websocket.onopen = () => {
+                    this.updateStatus('connected', `Connected to ${displayName}`);
+                };
+
+                this.websocket.onmessage = (event) => {
+                    try {
+                        const message = JSON.parse(event.data);
+                        this.handleMessage(message);
+                    } catch (error) {
+                        console.error('Error parsing message:', error);
+                    }
+                };
+
+                this.websocket.onclose = () => {
+                    this.updateStatus('disconnected', 'Disconnected');
+                };
+
+                this.websocket.onerror = (error) => {
+                    this.updateStatus('error', 'Connection error');
+                    console.error('WebSocket error:', error);
+                };
+            }
+
+            handleMessage(message) {
+                switch (message.type) {
+                    case 'connected':
+                        this.updateStatus('connected', `Connected to ${message.display_name}`);
+                        break;
+                    case 'log':
+                        this.appendLogEntry(message.data);
+                        break;
+                    case 'error':
+                        this.updateStatus('error', message.message);
+                        this.appendLogEntry({ MESSAGE: `ERROR: ${message.message}`, _PRIORITY: '3' });
+                        break;
+                }
+            }
+
+            appendLogEntry(logData) {
+                const timestamp = logData.__REALTIME_TIMESTAMP ? 
+                    new Date(parseInt(logData.__REALTIME_TIMESTAMP) / 1000).toLocaleTimeString() :
+                    new Date().toLocaleTimeString();
+                
+                const message = logData.MESSAGE || '';
+                const priority = logData._PRIORITY || '6';
+                
+                // Color based on priority (syslog levels)
+                let color = 'text-green-400'; // default
+                switch (priority) {
+                    case '0': // emergency
+                    case '1': // alert  
+                    case '2': // critical
+                    case '3': // error
+                        color = 'text-red-400';
+                        break;
+                    case '4': // warning
+                        color = 'text-yellow-400';
+                        break;
+                    case '5': // notice
+                        color = 'text-blue-400';
+                        break;
+                    case '6': // info
+                        color = 'text-green-400';
+                        break;
+                    case '7': // debug
+                        color = 'text-gray-400';
+                        break;
+                }
+
+                const logLine = document.createElement('div');
+                logLine.className = `${color} mb-1`;
+                logLine.textContent = `[${timestamp}] ${message}`;
+                
+                this.logOutput.appendChild(logLine);
+                
+                // Only auto-scroll if watch is enabled
+                if (this.watchEnabled) {
+                    this.scrollToBottom();
+                }
+            }
+
+            updateStatus(status, text) {
+                this.statusText.textContent = text;
+                
+                // Update main status indicator color
+                this.statusIndicator.className = 'w-3 h-3 rounded-full mr-3';
+                
+                // Update tab indicator color
+                const activeTab = document.querySelector(`[data-service="${this.currentService}"]`);
+                const tabIndicator = activeTab ? activeTab.querySelector('.service-indicator') : null;
+                
+                switch (status) {
+                    case 'connected':
+                        this.statusIndicator.classList.add('bg-green-500');
+                        if (tabIndicator) {
+                            tabIndicator.classList.remove('bg-gray-400', 'bg-yellow-500', 'bg-red-500');
+                            tabIndicator.classList.add('bg-green-500');
+                        }
+                        break;
+                    case 'connecting':
+                        this.statusIndicator.classList.add('bg-yellow-500');
+                        if (tabIndicator) {
+                            tabIndicator.classList.remove('bg-gray-400', 'bg-green-500', 'bg-red-500');
+                            tabIndicator.classList.add('bg-yellow-500');
+                        }
+                        break;
+                    case 'disconnected':
+                        this.statusIndicator.classList.add('bg-gray-400');
+                        if (tabIndicator) {
+                            tabIndicator.classList.remove('bg-green-500', 'bg-yellow-500', 'bg-red-500');
+                            tabIndicator.classList.add('bg-gray-400');
+                        }
+                        break;
+                    case 'error':
+                        this.statusIndicator.classList.add('bg-red-500');
+                        if (tabIndicator) {
+                            tabIndicator.classList.remove('bg-gray-400', 'bg-yellow-500', 'bg-green-500');
+                            tabIndicator.classList.add('bg-red-500');
+                        }
+                        break;
+                }
+            }
+
+            async restartService() {
+                if (!this.currentService) return;
+                
+                try {
+                    // Disable button and show loading state
+                    this.restartServiceButton.disabled = true;
+                    this.restartServiceButton.textContent = 'Restarting...';
+                    
+                    const response = await fetch(`/admin/logs/restart/${this.currentService}`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        credentials: 'same-origin'
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        // Add restart message to logs
+                        this.appendLogEntry({
+                            MESSAGE: `✓ Service restart initiated successfully`,
+                            _PRIORITY: '5'
+                        });
+                    } else {
+                        // Add error message to logs
+                        this.appendLogEntry({
+                            MESSAGE: `✗ Failed to restart service: ${result.message}`,
+                            _PRIORITY: '3'
+                        });
+                    }
+                } catch (error) {
+                    console.error('Error restarting service:', error);
+                    this.appendLogEntry({
+                        MESSAGE: `✗ Error restarting service: ${error.message}`,
+                        _PRIORITY: '3'
+                    });
+                } finally {
+                    // Re-enable button
+                    this.restartServiceButton.disabled = false;
+                    this.restartServiceButton.textContent = 'Restart Service';
+                }
+            }
+
+            scrollToBottom() {
+                this.logContainer.scrollTop = this.logContainer.scrollHeight;
+            }
+
+            clearLogs() {
+                this.logOutput.innerHTML = '';
+            }
+
+            deactivateService() {
+                // Reset all tabs to inactive state
+                this.serviceTabs.forEach(tab => {
+                    tab.classList.remove('bg-white', 'text-gray-900', 'border-gray-300', 'shadow-sm', 'z-10');
+                    tab.classList.add('bg-gray-200', 'text-gray-600', 'border-gray-300');
+                    
+                    // Reset service indicator
+                    const indicator = tab.querySelector('.service-indicator');
+                    if (indicator) {
+                        indicator.classList.remove('bg-green-500', 'bg-yellow-500', 'bg-red-500');
+                        indicator.classList.add('bg-gray-400');
+                    }
+                });
+                
+                // Disconnect and reset
+                this.disconnect();
+                this.clearLogs();
+                this.updateStatus('disconnected', 'Select a service to start streaming logs');
+                
+                // Disable restart button
+                this.restartServiceButton.disabled = true;
+            }
+
+            disconnect() {
+                if (this.websocket) {
+                    this.websocket.close();
+                    this.websocket = null;
+                }
+                this.currentService = null;
+            }
+        }
+
+        // Initialize the logs page when DOM is loaded
+        document.addEventListener('DOMContentLoaded', () => {
+            new LogsPage();
+        });
+    </script>
+{% endblock %}

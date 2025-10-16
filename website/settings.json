@@ -3,5 +3,17 @@
     "DISCORD_PUBLIC_KEY": "734d884300f1ac2c546510870b05e85554b25cdcbfa9173fc35920241303fe34",
     "DISCORD_CALLBACK_URL": "https://www.pugs.tf/auth/discord/callback",
     "STEAM_OPENID_REALM": "https://www.pugs.tf",
-    "STEAM_OPENID_CALLBACK_URL": "https://www.pugs.tf/auth/steam/callback"
+    "STEAM_OPENID_CALLBACK_URL": "https://www.pugs.tf/auth/steam/callback",
+    "SYSTEMD_SERVICES": {
+        "podman-newt": {
+            "display_name": "Newt",
+            "description": "Podman container for Newt service",
+            "journalctl_args": ["--user", "-u", "podman-newt"]
+        },
+        "sunshine": {
+            "display_name": "Sunshine",
+            "description": "Sunshine streaming service",
+            "journalctl_args": ["--user", "-u", "sunshine"]
+        }
+    }
 }

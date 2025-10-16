@@ -1,6 +1,6 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict, JsonConfigSettingsSource, PydanticBaseSettingsSource
 from pydantic import HttpUrl, Field, SecretStr, model_validator
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from functools import lru_cache
 
 class Settings(BaseSettings):
@@ -61,6 +61,9 @@ class Settings(BaseSettings):
     MISS_PAULING_CORS_CREDENTIALS: bool = Field(default=True)
     
     MISS_PAULING_SESSION_EXPIRY_HOURS: int = 24 * 7  # 1 week
+    
+    # Systemd services configuration for log streaming
+    SYSTEMD_SERVICES: Dict[str, Any] = Field(default_factory=dict)
 
     environment: str = Field(
         default="development",
