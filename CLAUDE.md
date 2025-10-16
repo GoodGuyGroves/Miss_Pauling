@@ -74,7 +74,7 @@ Located in `shared/models.py`:
 - **Config**: `app/core/config.py` loads from `settings.json`
 - **Auth flow**: `app/routers/auth.py` + `app/services/auth_service.py`
 - **Role system**: `app/core/roles.py` provides decorators and utilities for RBAC
-- **Admin dashboard**: `app/routers/admin.py` provides `/admin` and `/admin/users` management interface
+- **Admin dashboard**: `app/routers/admin.py` provides `/admin`, `/admin/users`, and `/admin/logs` management interface
 - **Templates**: Use TailwindCSS classes, minimal vanilla JavaScript
 - **Steam integration**: Always use `steam_id64` as primary identifier
 - **Navigation**: Conditional UI elements based on user roles (`is_admin` template variable)
@@ -106,7 +106,7 @@ Located in `shared/models.py`:
 - **Permission checks**: Use helper functions like `is_admin(user, db)` or `is_moderator_or_above(user, db)`
 - **Auto-assignment**: New users automatically get "user" role on account creation
 - **Role hierarchy**: superadmin (0) > administrator (1) > moderator (2) > helper (3) > captain (4) > user (5)
-- **Admin dashboard**: Access at `/admin` (moderator+ required), user management at `/admin/users`
+- **Admin dashboard**: Access at `/admin` (moderator+ required), user management at `/admin/users`, server logs at `/admin/logs`
 - **Role assignment rules**: Users can only assign roles lower in hierarchy than their own highest role
 - **Audit logging**: Role changes are logged to console with format: `ROLE ASSIGNED/REMOVED: User [Admin] assigned/removed 'role' to/from user [Target]`
 - **Cross-service integration**: FastDL service enforces helper+ for map deletion and mapcycle operations
@@ -124,9 +124,33 @@ Located in `shared/models.py`:
 ### Admin Dashboard Web Interface
 - **Main dashboard**: `/admin` - Overview and navigation (moderator+ required)
 - **User management**: `/admin/users` - List users, assign/remove roles with checkboxes
+- **Server logs**: `/admin/logs` - Real-time systemd service log monitoring with WebSocket streaming
 - **Real-time updates**: AJAX role assignment without page refresh
 - **Role restrictions**: Can only assign roles lower than own highest role
 - **Self-protection**: Cannot modify own roles via dashboard
+
+### Server Logs System
+- **Configuration**: Systemd services configured in `settings.json` under `SYSTEMD_SERVICES`
+- **Service format**: Each service requires `display_name`, `description`, and `journalctl_args` array
+- **Real-time streaming**: WebSocket-based log streaming using `journalctl -f --output=json`
+- **Service management**: Restart services directly from web interface with `systemctl restart`
+- **Tab interface**: Browser-like tabs for switching between different services
+- **Auto-scroll control**: "Watch" checkbox to enable/disable automatic scrolling
+- **User access**: Moderator+ privileges required for log access and service restart
+- **Audit logging**: All service restart actions are logged with user attribution
+
+#### Example Service Configuration
+```json
+{
+  "SYSTEMD_SERVICES": {
+    "podman-newt": {
+      "display_name": "Newt Service",
+      "description": "Podman container for Newt service",
+      "journalctl_args": ["--user", "-u", "podman-newt"]
+    }
+  }
+}
+```
 
 ### Command Line Admin Tools
 ```bash
@@ -150,15 +174,18 @@ python admin_roles.py find-user <search_term>
 - **Session validation**: `/api/validate/session` - Returns user info including roles
 - **Role assignment**: `POST /admin/users/assign-role` - Assign/remove roles (CSRF protected)
 - **User data**: `GET /admin/users/data` - Get users list for AJAX updates
+- **Log streaming**: `WebSocket /admin/logs/stream/{service_name}` - Real-time systemd log streaming
+- **Service restart**: `POST /admin/logs/restart/{service_name}` - Restart systemd services
 
 ### File Structure
 ```
 Miss_Pauling/
 ├── website/          # Web application with auth
-│   ├── app/routers/admin.py     # Admin dashboard routes
+│   ├── app/routers/admin.py     # Admin dashboard routes (includes logs WebSocket)
 │   ├── app/models/admin.py      # Admin Pydantic models
 │   ├── app/core/roles.py        # RBAC decorators and utilities
-│   └── templates/admin/         # Admin dashboard templates
+│   ├── app/core/config.py       # Settings including SYSTEMD_SERVICES config
+│   └── templates/admin/         # Admin dashboard templates (dashboard, users, logs)
 ├── fastdl/          # Map file server
 │   └── core/auth.py            # Role enforcement for FastDL
 ├── docs/            # MkDocs documentation
