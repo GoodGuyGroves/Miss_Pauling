@@ -38,7 +38,7 @@
         "pugstf-website": {
             "display_name": "pugs.tf",
             "description": "The www.pugs.tf website service",
-            "journalctl_args": ["--user", "-u", "pugB"]
+            "journalctl_args": ["--user", "-u", "pugstf"]
         }
     }
 }
