@@ -2,14 +2,14 @@
     "servers": [
         {
             "name": "pugA",
-            "tf_dir": "/home/russ/Documents/code/tf2-map-manager/servers/tf2/pugA/tf"
+            "tf_dir": "/home/steam/servers/tf2/pugA/tf"
         },
         {
             "name": "pugB",
-            "tf_dir": "/home/russ/Documents/code/tf2-map-manager/servers/tf2/pugB/tf"
+            "tf_dir": "/home/steam/servers/tf2/pugA/tf"
         }
     ],
-    "maps_dir": "/home/russ/Documents/code/tf2-map-manager/servers/tf2/pugA/tf/maps",
+    "maps_dir": "/home/steam/servers/tf2/pugA/tf/maps",
     "allowed_map_extensions": [".bsp"],
     "max_map_file_size": 100,
     "mapcycles": ["pt_official","pt_all"],
