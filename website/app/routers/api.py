@@ -1,11 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from sqlalchemy.orm import Session
-from typing import Optional
+from typing import Optional, List
 
 from shared.database import get_db
 from shared.repositories import UserRepository
 from website.app.models.responses import UserValidationResponse
+from website.app.services.tf2_service import tf2_service, ServerStatus
+from website.app.services.logs_service import logs_service, GameLog
 
 router = APIRouter(prefix="/api", tags=["API"])
 
@@ -93,3 +95,23 @@ async def validate_session(
         raise
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Session validation failed: {str(e)}")
+
+
+@router.get("/servers", response_model=List[ServerStatus])
+async def get_servers_status():
+    """Get status of all configured TF2 servers"""
+    try:
+        servers = await tf2_service.get_all_servers_status()
+        return servers
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to query servers: {str(e)}")
+
+
+@router.get("/recent-games", response_model=List[GameLog])
+async def get_recent_games():
+    """Get recent games from logs.tf"""
+    try:
+        games = await logs_service.get_recent_games(limit=10)
+        return games
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to query recent games: {str(e)}")

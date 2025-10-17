@@ -1,12 +1,19 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict, JsonConfigSettingsSource, PydanticBaseSettingsSource
-from pydantic import HttpUrl, Field, SecretStr, model_validator
+from pydantic import HttpUrl, Field, SecretStr, model_validator, BaseModel
 from typing import List, Optional, Dict, Any
 from functools import lru_cache
+
+class TF2Server(BaseModel):
+    """TF2 server configuration"""
+    name: str = Field(description="Display name for the server")
+    host: str = Field(description="Server hostname or IP address")
+    port: int = Field(description="Server port")
+    dir: str = Field(description="Server directory path containing tf/cfg/server.cfg")
 
 class Settings(BaseSettings):
     # Load sensitive values from website.app.env
     MISS_PAULING_API_SECRET_KEY: SecretStr = Field(
-        description="Key used by Miss Pauling for cryptographic singing and verification of auth tokens. Set it yourself."
+        description="Key used by pugs.tf for cryptographic singing and verification of auth tokens. Set it yourself."
     )
     STEAM_API_KEY: SecretStr = Field(
         description="Steam API key for Steam OpenID integration"
@@ -64,6 +71,15 @@ class Settings(BaseSettings):
     
     # Systemd services configuration for log streaming
     SYSTEMD_SERVICES: Dict[str, Any] = Field(default_factory=dict)
+    
+    # TF2 servers configuration for server browser
+    TF2_SERVERS: List[TF2Server] = Field(default_factory=list)
+    
+    # logs.tf uploader SteamID64 for recent games
+    LOGS_TF_UPLOADER_STEAM_ID: Optional[str] = Field(
+        default=None,
+        description="SteamID64 of the account that uploads logs to logs.tf"
+    )
 
     environment: str = Field(
         default="development",

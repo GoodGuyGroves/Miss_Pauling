@@ -46,8 +46,8 @@ with Session() as session:
 
 # Create FastAPI application instance
 app = FastAPI(
-    title="Miss Pauling",
-    description="A minimal FastAPI application with Steam and Discord authentication",
+    title="pugs.tf",
+    description="A TF2 community platform with Steam and Discord authentication",
     version="0.1.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",

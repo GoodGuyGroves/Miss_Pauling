@@ -1,46 +1,47 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="mx-auto max-w-md p-4">
-    <h1 class="mb-8 text-center text-3xl font-bold">Miss Pauling</h1>
+<div class="mx-auto max-w-4xl p-4">
+    <div class="text-center mb-8">
+        <h1 class="text-3xl font-bold mb-2">Server Browser</h1>
+        <button onclick="loadServers()" 
+                class="mt-3 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors">
+            🔄 Refresh
+        </button>
+    </div>
 
-    {% if not user %}
-        <div class="mb-6 rounded-lg border border-gray-200 bg-gray-50 p-6">
-            <h2 class="mb-4 text-2xl font-semibold text-center">Welcome!</h2>
-            <p class="mb-6 text-center">Please sign in with Discord to access your profile</p>
-            
-            <div class="flex flex-col items-center">
-                <a href="/auth/discord/login"
-                   class="w-full rounded bg-indigo-600 px-4 py-3 font-semibold text-white hover:bg-indigo-700 flex items-center justify-center gap-2">
-                    <!-- Discord logo SVG -->
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M13.545 2.907a13.227 13.227 0 0 0-3.257-1.011.05.05 0 0 0-.052.025c-.141.25-.297.577-.406.833a12.19 12.19 0 0 0-3.658 0 8.258 8.258 0 0 0-.412-.833.051.051 0 0 0-.052-.025c-1.125.194-2.22.534-3.257 1.011a.041.041 0 0 0-.021.018C.356 6.024-.213 9.047.066 12.032c.001.014.01.028.021.037a13.276 13.276 0 0 0 3.995 2.02.05.05 0 0 0 .056-.019c.308-.42.582-.863.818-1.329a.05.05 0 0 0-.01-.059.051.051 0 0 0-.018-.011 8.875 8.875 0 0 1-1.248-.595.05.05 0 0 1-.02-.066.051.051 0 0 1 .015-.019c.084-.063.168-.129.248-.195a.05.05 0 0 1 .051-.007c2.619 1.196 5.454 1.196 8.041 0a.052.052 0 0 1 .053.007c.08.066.164.132.248.195a.051.051 0 0 1-.004.085 8.254 8.254 0 0 1-1.249.594.05.05 0 0 0-.03.03.052.052 0 0 0 .003.041c.24.465.515.909.817 1.329a.05.05 0 0 0 .056.019 13.235 13.235 0 0 0 4.001-2.02.049.049 0 0 0 .021-.037c.334-3.451-.559-6.449-2.366-9.106a.034.034 0 0 0-.02-.019Zm-8.198 7.307c-.789 0-1.438-.724-1.438-1.612 0-.889.637-1.613 1.438-1.613.807 0 1.45.73 1.438 1.613 0 .888-.637 1.612-1.438 1.612Zm5.316 0c-.788 0-1.438-.724-1.438-1.612 0-.889.637-1.613 1.438-1.613.807 0 1.451.73 1.438 1.613 0 .888-.631 1.612-1.438 1.612Z"/>
-                    </svg>
-                    Login with Discord
-                </a>
-            </div>
-
-            <div class="mt-6 text-sm text-center text-gray-600">
-                <p>Login to access your profile and manage your linked accounts</p>
-            </div>
+    <!-- Server Browser -->
+    <div id="server-browser" class="space-y-4">
+        <!-- Loading state -->
+        <div id="loading" class="text-center py-8">
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+            <p class="mt-2 text-gray-600">Loading server status...</p>
         </div>
-    {% else %}
-        <div class="bg-green-50 border border-green-200 rounded-lg p-6 text-center">
-            <p class="text-xl mb-4">Welcome back, <span class="font-semibold">{{ user.name or 'User' }}</span>!</p>
-            <p class="mb-4">You are logged in.</p>
-            <div class="flex justify-center gap-4">
-                <a href="/profile" 
-                   class="inline-block rounded bg-blue-500 px-4 py-2 font-semibold text-white hover:bg-blue-600">
-                    View Profile
-                </a>
-                <form action="/auth/logout" method="post" style="display: inline;">
-                    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-                    <button type="submit"
-                            class="inline-block rounded bg-red-400 px-4 py-2 font-semibold text-white hover:bg-red-500">
-                        Logout
-                    </button>
-                </form>
-            </div>
+        
+        <!-- Server list will be populated here -->
+        <div id="server-list" class="hidden space-y-4"></div>
+        
+        <!-- Error state -->
+        <div id="error" class="hidden text-center py-8">
+            <p class="text-red-600">Failed to load server information</p>
+            <button onclick="loadServers()" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                Retry
+            </button>
+        </div>
+    </div>
+
+    <!-- User Actions -->
+    {% if not user %}
+        <div class="mt-8 text-center">
+            <p class="mb-4 text-gray-600">Sign in to access additional features</p>
+            <a href="/auth/discord/login"
+               class="inline-flex items-center gap-2 rounded bg-indigo-600 px-6 py-3 font-semibold text-white hover:bg-indigo-700">
+                <!-- Discord logo SVG -->
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M13.545 2.907a13.227 13.227 0 0 0-3.257-1.011.05.05 0 0 0-.052.025c-.141.25-.297.577-.406.833a12.19 12.19 0 0 0-3.658 0 8.258 8.258 0 0 0-.412-.833.051.051 0 0 0-.052-.025c-1.125.194-2.22.534-3.257 1.011a.041.041 0 0 0-.021.018C.356 6.024-.213 9.047.066 12.032c.001.014.01.028.021.037a13.276 13.276 0 0 0 3.995 2.02.05.05 0 0 0 .056-.019c.308-.42.582-.863.818-1.329a.05.05 0 0 0-.01-.059.051.051 0 0 0-.018-.011 8.875 8.875 0 0 1-1.248-.595.05.05 0 0 1-.02-.066.051.051 0 0 1 .015-.019c.084-.063.168-.129.248-.195a.05.05 0 0 1 .051-.007c2.619 1.196 5.454 1.196 8.041 0a.052.052 0 0 1 .053.007c.08.066.164.132.248.195a.051.051 0 0 1-.004.085 8.254 8.254 0 0 1-1.249.594.05.05 0 0 0-.03.03.052.052 0 0 0 .003.041c.24.465.515.909.817 1.329a.05.05 0 0 0 .056.019 13.235 13.235 0 0 0 4.001-2.02.049.049 0 0 0 .021-.037c.334-3.451-.559-6.449-2.366-9.106a.034.034 0 0 0-.02-.019Zm-8.198 7.307c-.789 0-1.438-.724-1.438-1.612 0-.889.637-1.613 1.438-1.613.807 0 1.45.73 1.438 1.613 0 .888-.637 1.612-1.438 1.612Zm5.316 0c-.788 0-1.438-.724-1.438-1.612 0-.889.637-1.613 1.438-1.613.807 0 1.451.73 1.438 1.613 0 .888-.631 1.612-1.438 1.612Z"/>
+                </svg>
+                Login with Discord
+            </a>
         </div>
     {% endif %}
 
@@ -55,5 +56,345 @@
             {{ success }}
         </div>
     {% endif %}
+    
+    <!-- Recent Games Section -->
+    <div class="mt-12 mx-auto max-w-4xl">
+        <div class="text-center mb-6">
+            <h2 class="text-2xl font-bold mb-2">Recent Games</h2>
+            <p class="text-gray-600">Last 10 games played on our servers</p>
+        </div>
+        
+        <div id="recent-games" class="bg-white rounded-lg border border-gray-200 overflow-hidden">
+            <!-- Loading state -->
+            <div id="games-loading" class="text-center py-8">
+                <div class="inline-block animate-spin rounded-full h-6 w-6 border-b-2 border-blue-600"></div>
+                <p class="mt-2 text-gray-600">Loading recent games...</p>
+            </div>
+            
+            <!-- Games list will be populated here -->
+            <div id="games-list" class="hidden"></div>
+            
+            <!-- Error state -->
+            <div id="games-error" class="hidden text-center py-8">
+                <p class="text-red-600">Failed to load recent games</p>
+                <button onclick="loadRecentGames()" class="mt-2 px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700">
+                    Retry
+                </button>
+            </div>
+        </div>
+    </div>
 </div>
+
+<script>
+let refreshInterval;
+
+async function loadServers() {
+    const loading = document.getElementById('loading');
+    const serverList = document.getElementById('server-list');
+    const error = document.getElementById('error');
+    
+    // Show loading state
+    loading.classList.remove('hidden');
+    serverList.classList.add('hidden');
+    error.classList.add('hidden');
+    
+    try {
+        const response = await fetch('/api/servers');
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const servers = await response.json();
+        displayServers(servers);
+        
+        // Hide loading, show server list
+        loading.classList.add('hidden');
+        serverList.classList.remove('hidden');
+        
+    } catch (err) {
+        console.error('Failed to load servers:', err);
+        
+        // Hide loading, show error
+        loading.classList.add('hidden');
+        error.classList.remove('hidden');
+    }
+}
+
+function displayServers(servers) {
+    const serverList = document.getElementById('server-list');
+    
+    if (servers.length === 0) {
+        serverList.innerHTML = '<div class="text-center py-8 text-gray-600">No servers configured</div>';
+        return;
+    }
+    
+    serverList.innerHTML = servers.map((server, index) => {
+        const statusColor = server.status === 'online' ? 'green' : 
+                           server.status === 'offline' ? 'red' : 'yellow';
+        const statusText = server.status === 'online' ? 'Online' : 
+                          server.status === 'offline' ? 'Offline' : 'Error';
+        
+        const serverId = `server-${index}`;
+        const detailsId = `details-${index}`;
+        
+        return `
+            <div class="bg-white rounded-lg border border-gray-200 overflow-hidden transition-shadow">
+                <!-- Main server info (clickable) -->
+                <div class="p-6 hover:shadow-md transition-shadow cursor-pointer server-card" 
+                     onclick="toggleServerDetails('${serverId}', '${detailsId}')"
+                     data-server-id="${serverId}">
+                    <div class="flex items-center justify-between">
+                        <div class="flex-1">
+                            <div class="flex items-center gap-3 mb-2">
+                                <h3 class="text-lg font-semibold">${escapeHtml(server.name)}</h3>
+                                <span class="px-2 py-1 text-xs font-medium rounded-full bg-${statusColor}-100 text-${statusColor}-800">
+                                    ${statusText}
+                                </span>
+                                ${server.password_protected ? '<span class="px-2 py-1 text-xs font-medium rounded-full bg-yellow-100 text-yellow-800">🔒 Password</span>' : ''}
+                                ${server.tournament_info?.enabled ? '<span class="px-2 py-1 text-xs font-medium rounded-full bg-purple-100 text-purple-800">🏆 Tournament</span>' : ''}
+                            </div>
+                            
+                            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-600">
+                                <div>
+                                    <span class="font-medium">Map:</span> ${escapeHtml(server.map)}
+                                </div>
+                                <div>
+                                    <span class="font-medium">Players:</span> ${server.players}/${server.max_players}
+                                    ${server.spectators ? ` (+${server.spectators} spec)` : ''}
+                                </div>
+                                <div>
+                                    <span class="font-medium">Ping:</span> ${server.response_time_ms || 'N/A'}ms
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="ml-6 flex items-center gap-3">
+                            <div class="text-gray-400">
+                                <span class="expand-icon text-sm">▼</span>
+                            </div>
+                            ${server.status === 'online' ? 
+                                `<a href="${server.connect_url}" 
+                                   class="inline-block bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2 px-4 rounded"
+                                   onclick="event.stopPropagation()">
+                                    Connect
+                                </a>` : 
+                                `<button disabled 
+                                   class="inline-block bg-gray-400 text-white font-semibold py-2 px-4 rounded cursor-not-allowed">
+                                    Offline
+                                </button>`
+                            }
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Expandable details section -->
+                <div id="${detailsId}" class="hidden bg-gray-50 border-t border-gray-200">
+                    ${server.status === 'online' ? generateServerDetails(server) : '<div class="p-6 text-center text-gray-500">Server offline - no details available</div>'}
+                </div>
+            </div>
+        `;
+    }).join('');
+}
+
+function generateServerDetails(server) {
+    let html = '<div class="p-6 space-y-6">';
+    
+    // Tournament section (only if tournament mode is enabled)
+    if (server.tournament_info?.enabled) {
+        html += `
+            <div class="bg-purple-50 rounded-lg p-4 border border-purple-200">
+                <h4 class="text-lg font-semibold text-purple-900 mb-3 flex items-center">
+                    🏆 Tournament Mode
+                </h4>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm">
+                    <div>
+                        <span class="font-medium text-purple-800">Win Limit:</span>
+                        <span class="text-purple-700">${server.tournament_info.win_limit || 'Not set'}</span>
+                    </div>
+                    <div>
+                        <span class="font-medium text-purple-800">Time Limit:</span>
+                        <span class="text-purple-700">${server.tournament_info.time_limit ? server.tournament_info.time_limit + ' min' : 'Not set'}</span>
+                    </div>
+                    <div>
+                        <span class="font-medium text-purple-800">Status:</span>
+                        <span class="text-purple-700">Active</span>
+                    </div>
+                </div>
+            </div>
+        `;
+    }
+    
+    // Players section
+    html += `
+        <div class="bg-white rounded-lg p-4 border border-gray-200">
+            <h4 class="text-lg font-semibold text-gray-900 mb-3 flex items-center justify-between">
+                👥 Players (${server.player_list?.length || 0})
+                ${server.spectators ? `<span class="text-sm font-normal text-gray-600">+${server.spectators} spectators</span>` : ''}
+            </h4>
+    `;
+    
+    if (server.player_list && server.player_list.length > 0) {
+        html += `
+            <div class="overflow-x-auto">
+                <table class="min-w-full text-sm">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-3 py-2 text-left font-medium text-gray-700">Player</th>
+                            <th class="px-3 py-2 text-left font-medium text-gray-700">Connected</th>
+                            <th class="px-3 py-2 text-left font-medium text-gray-700">Ping</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-gray-200">
+        `;
+        
+        server.player_list.forEach(player => {
+            html += `
+                <tr class="hover:bg-gray-50">
+                    <td class="px-3 py-2">
+                        <div class="font-medium text-gray-900">${escapeHtml(player.name)}</div>
+                        <div class="text-xs text-gray-500" title="${player.steam_id}">${player.steam_id.substring(0, 15)}${player.steam_id.length > 15 ? '...' : ''}</div>
+                    </td>
+                    <td class="px-3 py-2 text-gray-600">${player.time_connected}</td>
+                    <td class="px-3 py-2 text-gray-600">${player.ping}ms</td>
+                </tr>
+            `;
+        });
+        
+        html += `
+                    </tbody>
+                </table>
+            </div>
+        `;
+    } else {
+        html += '<div class="text-center py-4 text-gray-500">No players currently connected</div>';
+    }
+    
+    html += '</div></div>';
+    return html;
+}
+
+function toggleServerDetails(serverId, detailsId) {
+    const detailsElement = document.getElementById(detailsId);
+    const serverCard = document.querySelector(`[data-server-id="${serverId}"]`);
+    const expandIcon = serverCard.querySelector('.expand-icon');
+    
+    if (detailsElement.classList.contains('hidden')) {
+        // Expand
+        detailsElement.classList.remove('hidden');
+        expandIcon.textContent = '▲';
+        serverCard.classList.add('bg-blue-50');
+    } else {
+        // Collapse
+        detailsElement.classList.add('hidden');
+        expandIcon.textContent = '▼';
+        serverCard.classList.remove('bg-blue-50');
+    }
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+// Start auto-refresh
+function startAutoRefresh() {
+    refreshInterval = setInterval(loadServers, 30000); // Refresh every 30 seconds
+}
+
+function stopAutoRefresh() {
+    if (refreshInterval) {
+        clearInterval(refreshInterval);
+    }
+}
+
+// Load recent games
+async function loadRecentGames() {
+    const loading = document.getElementById('games-loading');
+    const gamesList = document.getElementById('games-list');
+    const error = document.getElementById('games-error');
+    
+    // Show loading state
+    loading.classList.remove('hidden');
+    gamesList.classList.add('hidden');
+    error.classList.add('hidden');
+    
+    try {
+        const response = await fetch('/api/recent-games');
+        if (!response.ok) {
+            throw new Error(`HTTP ${response.status}`);
+        }
+        
+        const games = await response.json();
+        displayRecentGames(games);
+        
+        // Hide loading, show games list
+        loading.classList.add('hidden');
+        gamesList.classList.remove('hidden');
+        
+    } catch (err) {
+        console.error('Failed to load recent games:', err);
+        
+        // Hide loading, show error
+        loading.classList.add('hidden');
+        error.classList.remove('hidden');
+    }
+}
+
+function displayRecentGames(games) {
+    const gamesList = document.getElementById('games-list');
+    
+    if (games.length === 0) {
+        gamesList.innerHTML = '<div class="text-center py-8 text-gray-600">No recent games found</div>';
+        return;
+    }
+    
+    gamesList.innerHTML = `
+        <div class="overflow-x-auto">
+            <table class="min-w-full">
+                <thead class="bg-gray-50">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Game</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Map</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Format</th>
+                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    </tr>
+                </thead>
+                <tbody class="bg-white divide-y divide-gray-200">
+                    ${games.map(game => {
+                        const date = new Date(game.date);
+                        const formatDate = date.toLocaleDateString() + ' ' + date.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+                        
+                        return `
+                            <tr class="hover:bg-gray-50 cursor-pointer" onclick="window.open('${game.more_tf_url}', '_blank')">
+                                <td class="px-6 py-4">
+                                    <div class="text-sm font-medium text-gray-900">${escapeHtml(game.title)}</div>
+                                    <div class="text-xs text-gray-500">Log #${game.log_id}</div>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-900">${escapeHtml(game.map)}</td>
+                                <td class="px-6 py-4">
+                                    <span class="px-2 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800">
+                                        ${escapeHtml(game.format)}
+                                    </span>
+                                </td>
+                                <td class="px-6 py-4 text-sm text-gray-500">${formatDate}</td>
+                            </tr>
+                        `;
+                    }).join('')}
+                </tbody>
+            </table>
+        </div>
+    `;
+}
+
+// Load servers and games when page loads
+document.addEventListener('DOMContentLoaded', function() {
+    loadServers();
+    loadRecentGames();
+    startAutoRefresh();
+});
+
+// Clean up interval when page unloads
+window.addEventListener('beforeunload', stopAutoRefresh);
+</script>
 {% endblock %}
