@@ -35,7 +35,7 @@ If you bait repeatedly while not removing from the bot we will ban you, as you a
 
 ### 6: You must be engaged in pugs to play
 
-Pugs are for fun, but you still need to actively communicate with your team and be engaged in the game. No excessive/intentional throwing or going AFK for extended periods. Ignoring the objective and or your teammates will ruin the game for the 7 other people on the server. (edited)Friday, August 29, 2025 at 11:15 PM
+Pugs are for fun, but you still need to actively communicate with your team and be engaged in the game. No excessive/intentional throwing or going AFK for extended periods. Ignoring the objective and or your teammates will ruin the game for the 7 other people on the server.
 
 
 ### 7: Have the weapons required to play the game
@@ -44,8 +44,6 @@ Please have the gunboats, crossbow, splendid screen, at the bare minimum to play
 
 Discord TOS must be followed in this server and any ETF2L Cheating and or any form of harassment Bans will be mirrored.
 Any use of scripts or similar will be considered as cheating, for a list of bannable scripts please check the [recommended rules for PASS Fortress / 4v4 PASS Time document](https://docs.google.com/document/d/1AlcZo9s1-MckEXF3v15GrfYM6kqugv7G7OWns-In8Rk/edit?tab=t.0#heading=h.odbv999qb42z) (which we are using).
-
-
 
 
 ## Binds
