@@ -252,7 +252,7 @@ function generateServerDetails(server) {
                 <tr class="hover:bg-gray-50">
                     <td class="px-3 py-2">
                         <div class="font-medium text-gray-900">${escapeHtml(player.name)}</div>
-                        <div class="text-xs text-gray-500" title="${player.steam_id}">${player.steam_id.substring(0, 15)}${player.steam_id.length > 15 ? '...' : ''}</div>
+                        <div class="text-xs text-gray-500" title="${player.steam_id}">${player.steam_id}</div>
                     </td>
                     <td class="px-3 py-2 text-gray-600">${player.time_connected}</td>
                     <td class="px-3 py-2 text-gray-600">${player.ping}ms</td>
