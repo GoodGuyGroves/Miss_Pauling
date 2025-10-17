@@ -54,6 +54,7 @@ There are two PASS Time-specific binds you can utilise that only work during a g
 
 - To call for pass: `bind "key" "voicemenu 0 8"`
 - Instant resupply: `bind "key" "+sm_pt_resupply"`
+- Killbind: `bind "key" "sm_pt_suicide"`
 
 
 ## Maps
