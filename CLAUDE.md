@@ -50,6 +50,8 @@ alembic upgrade head
 - **Database**: SQLite with SQLAlchemy 2.0+ ORM, auto-initialization on startup
 - **Templates**: Server-side Jinja2 rendering with TailwindCSS
 - **Sessions**: HTTP-only cookie-based with CSRF protection
+- **Server Browser**: Live TF2 server monitoring via RCON with expandable details
+- **Game History**: Recent match logs integration with logs.tf API
 - **Key principle**: Discord is required auth, Steam is optional linkable
 
 ### FastDL Service Architecture  
@@ -75,6 +77,8 @@ Located in `shared/models.py`:
 - **Auth flow**: `app/routers/auth.py` + `app/services/auth_service.py`
 - **Role system**: `app/core/roles.py` provides decorators and utilities for RBAC
 - **Admin dashboard**: `app/routers/admin.py` provides `/admin`, `/admin/users`, and `/admin/logs` management interface
+- **TF2 Integration**: `app/services/tf2_service.py` handles RCON queries for live server data
+- **Game Logs**: `app/services/logs_service.py` integrates with logs.tf API for match history
 - **Templates**: Use TailwindCSS classes, minimal vanilla JavaScript
 - **Steam integration**: Always use `steam_id64` as primary identifier
 - **Navigation**: Conditional UI elements based on user roles (`is_admin` template variable)
@@ -176,6 +180,8 @@ python admin_roles.py find-user <search_term>
 - **User data**: `GET /admin/users/data` - Get users list for AJAX updates
 - **Log streaming**: `WebSocket /admin/logs/stream/{service_name}` - Real-time systemd log streaming
 - **Service restart**: `POST /admin/logs/restart/{service_name}` - Restart systemd services
+- **Server status**: `GET /api/servers` - Live TF2 server data via RCON
+- **Recent games**: `GET /api/recent-games` - Last 10 games from logs.tf
 
 ### File Structure
 ```
@@ -183,8 +189,10 @@ Miss_Pauling/
 ├── website/          # Web application with auth
 │   ├── app/routers/admin.py     # Admin dashboard routes (includes logs WebSocket)
 │   ├── app/models/admin.py      # Admin Pydantic models
+│   ├── app/services/tf2_service.py    # TF2 RCON integration
+│   ├── app/services/logs_service.py   # logs.tf API integration
 │   ├── app/core/roles.py        # RBAC decorators and utilities
-│   ├── app/core/config.py       # Settings including SYSTEMD_SERVICES config
+│   ├── app/core/config.py       # Settings including TF2_SERVERS and LOGS_TF_UPLOADER_STEAM_ID
 │   └── templates/admin/         # Admin dashboard templates (dashboard, users, logs)
 ├── fastdl/          # Map file server
 │   └── core/auth.py            # Role enforcement for FastDL
