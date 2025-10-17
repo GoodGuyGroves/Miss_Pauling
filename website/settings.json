@@ -4,31 +4,41 @@
     "DISCORD_CALLBACK_URL": "https://www.pugs.tf/auth/discord/callback",
     "STEAM_OPENID_REALM": "https://www.pugs.tf",
     "STEAM_OPENID_CALLBACK_URL": "https://www.pugs.tf/auth/steam/callback",
+    "LOGS_TF_UPLOADER_STEAM_ID": "76561198003234706",
     "TF2_SERVERS": [
         {
             "name": "pugA",
             "host": "pugs.tf",
             "port": 27015,
-            "dir": "/home/russ/Documents/code/Miss_Pauling/tf2/pugA/"
+            "dir": "/home/steam/servers/tf2/pugA/"
         },
         {
             "name": "pugB",
             "host": "pugs.tf",
             "port": 27016,
-            "dir": "/home/russ/Documents/code/Miss_Pauling/tf2/pugB/"
+            "dir": "/home/steam/servers/tf2/pugB/"
         }
     ],
     "SYSTEMD_SERVICES": {
-        "podman-newt": {
-            "display_name": "Newt",
-            "description": "Podman container for Newt service",
-            "journalctl_args": ["--user", "-u", "podman-newt"]
+        "tf2-puga": {
+            "display_name": "PugA",
+            "description": "Pug A dedicated TF2 server",
+            "journalctl_args": ["--user", "-u", "pugA"]
         },
-        "sunshine": {
-            "display_name": "Sunshine",
-            "description": "Sunshine streaming service",
-            "journalctl_args": ["--user", "-u", "sunshine"]
+        "tf2-pugb": {
+            "display_name": "PugB",
+            "description": "Pug B dedicated TF2 server",
+            "journalctl_args": ["--user", "-u", "pugB"]
+        },
+        "pugstf-fastdl": {
+            "display_name": "FastDL",
+            "description": "The fastdl.pugs.tf FastDL service",
+            "journalctl_args": ["--user", "-u", "fastdl"]
+        },
+        "pugstf-website": {
+            "display_name": "pugs.tf",
+            "description": "The www.pugs.tf website service",
+            "journalctl_args": ["--user", "-u", "pugB"]
         }
-    },
-    "LOGS_TF_UPLOADER_STEAM_ID": "76561198003234706"
+    }
 }

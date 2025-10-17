@@ -1,0 +1,14 @@
+[Unit]
+Description=TF2 Map Manager
+After=network.target
+
+[Service]
+Type=exec
+User=steam
+WorkingDirectory=/home/steam/Miss_Pauling/website
+ExecStart=/home/steam/Miss_Pauling/website/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
