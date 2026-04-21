@@ -41,7 +41,7 @@ pymdown-extensions==10.16.1
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.2
 python-jose==3.5.0
-python-multipart==0.0.22
+python-multipart==0.0.26
 python3-openid==3.2.0
 PyYAML==6.0.3
 pyyaml_env_tag==1.1
