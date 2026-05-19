@@ -37,7 +37,7 @@ pydantic==2.11.9
 pydantic-settings==2.11.0
 pydantic_core==2.33.2
 Pygments==2.20.0
-pymdown-extensions==10.16.1
+pymdown-extensions==10.21.3
 python-dateutil==2.9.0.post0
 python-dotenv==1.2.2
 python-jose==3.5.0
