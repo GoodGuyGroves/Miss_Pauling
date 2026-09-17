@@ -4,7 +4,6 @@ from typing import List, Optional, Dict, Any
 from functools import lru_cache
 from pathlib import Path
 import os
-import re
 
 # The `pauling` package directory (templates/, static/, fastdl/) and the repo root
 # (settings.json, .env, docs/). All paths are resolved from here so the process can
@@ -18,27 +17,6 @@ DOCS_SITE_DIR = REPO_ROOT / "docs" / "site"
 # Non-secret settings file. Override to point at e.g. a Kubernetes ConfigMap mount.
 SETTINGS_FILE = Path(os.environ.get("MISS_PAULING_SETTINGS_FILE", REPO_ROOT / "settings.json"))
 
-class TF2Server(BaseModel):
-    """
-    TF2 server configuration for the server browser.
-
-    The website no longer runs on the game server host, so credentials come from
-    configuration rather than the server's own server.cfg. The RCON password is
-    read from the environment variable TF2_RCON_PASSWORD_<NAME> (name upper-cased,
-    non-alphanumerics replaced by '_'), falling back to `rcon_password` here.
-    """
-    name: str = Field(description="Display name for the server")
-    host: str = Field(description="Server hostname or IP address")
-    port: int = Field(description="Server port")
-    rcon_password: Optional[str] = Field(default=None, description="RCON password (prefer the TF2_RCON_PASSWORD_<NAME> env var)")
-    password_protected: bool = Field(default=False, description="Whether players need sv_password to join")
-
-    @property
-    def rcon_password_env_var(self) -> str:
-        return "TF2_RCON_PASSWORD_" + re.sub(r"[^A-Za-z0-9]", "_", self.name).upper()
-
-    def resolve_rcon_password(self) -> Optional[str]:
-        return os.environ.get(self.rcon_password_env_var) or self.rcon_password
 
 class Settings(BaseSettings):
     # Sensitive values come from the environment or <repo>/.env
@@ -111,8 +89,6 @@ class Settings(BaseSettings):
                     "when the map directories in fastdl/settings.json don't exist."
     )
     
-    # TF2 servers configuration for server browser
-    TF2_SERVERS: List[TF2Server] = Field(default_factory=list)
     
     # logs.tf uploader SteamID64 for recent games
     LOGS_TF_UPLOADER_STEAM_ID: Optional[str] = Field(

@@ -6,7 +6,6 @@ from typing import Optional, List
 from pauling.db.database import get_db
 from pauling.db.repositories import UserRepository
 from pauling.models.responses import UserValidationResponse
-from pauling.services.tf2_service import tf2_service, ServerStatus
 from pauling.services.logs_service import logs_service, GameLog
 
 router = APIRouter(prefix="/api", tags=["API"])
@@ -96,15 +95,6 @@ async def validate_session(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Session validation failed: {str(e)}")
 
-
-@router.get("/servers", response_model=List[ServerStatus])
-async def get_servers_status():
-    """Get status of all configured TF2 servers"""
-    try:
-        servers = await tf2_service.get_all_servers_status()
-        return servers
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to query servers: {str(e)}")
 
 
 @router.get("/recent-games", response_model=List[GameLog])

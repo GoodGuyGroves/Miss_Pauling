@@ -18,7 +18,8 @@ config.set_main_option("sqlalchemy.url", get_database_url())
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-if config.config_file_name is not None:
+# Skipped when run from inside the app (see pauling/db/migrate.py) so the app's logging is untouched.
+if config.config_file_name is not None and config.attributes.get("configure_logging", True):
     fileConfig(config.config_file_name)
 
 # add your model's MetaData object here
@@ -84,7 +85,11 @@ def run_migrations_online() -> None:
         # For SQLite, enable foreign keys - using text() for proper SQLAlchemy execution
         if connection.dialect.name == 'sqlite':
             connection.execute(text('PRAGMA foreign_keys=ON'))
-            
+            # SQLAlchemy 2.x auto-begins a transaction on that execute. End it here,
+            # otherwise Alembic sees an open transaction, does not manage its own,
+            # and the alembic_version row is rolled back when the connection closes.
+            connection.commit()
+
         context.configure(
             connection=connection, 
             target_metadata=target_metadata,

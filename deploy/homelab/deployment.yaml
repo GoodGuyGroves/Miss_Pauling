@@ -41,10 +41,6 @@ spec:
               valueFrom: { secretKeyRef: { name: miss-pauling-secrets, key: DISCORD_TOKEN } }
             - name: STEAM_API_KEY
               valueFrom: { secretKeyRef: { name: miss-pauling-secrets, key: STEAM_API_KEY } }
-            - name: TF2_RCON_PASSWORD_PUGA
-              valueFrom: { secretKeyRef: { name: miss-pauling-secrets, key: TF2_RCON_PASSWORD_PUGA } }
-            - name: TF2_RCON_PASSWORD_PUGB
-              valueFrom: { secretKeyRef: { name: miss-pauling-secrets, key: TF2_RCON_PASSWORD_PUGB } }
           volumeMounts:
             - name: data
               mountPath: /data

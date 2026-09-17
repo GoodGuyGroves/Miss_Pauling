@@ -79,7 +79,6 @@ _WEBSITE_SETTINGS = {
     "DISCORD_CALLBACK_URL": DISCORD_CALLBACK_URL,
     "STEAM_OPENID_REALM": WEBSITE_BASE,
     "STEAM_OPENID_CALLBACK_URL": "https://www.pugs.tf/auth/steam/callback",
-    "TF2_SERVERS": [{"name": "pugA", "host": "127.0.0.1", "port": 27015}],
 }
 _FASTDL_SETTINGS = {
     "hosts": ["fastdl.pugs.tf", "fastdl.localhost"],
@@ -108,7 +107,6 @@ APP_ENV = {
     "MISS_PAULING_SETTINGS_FILE": str(_website_settings_file),
     "FASTDL_SETTINGS_FILE": str(_fastdl_settings_file),
     "FASTDL_ENABLED": "true",
-    "TF2_RCON_PASSWORD_PUGA": "secret",
 }
 os.environ.update(APP_ENV)
 

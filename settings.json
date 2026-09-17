@@ -5,17 +5,5 @@
     "STEAM_OPENID_REALM": "https://www.pugs.tf",
     "STEAM_OPENID_CALLBACK_URL": "https://www.pugs.tf/auth/steam/callback",
     "LOGS_TF_UPLOADER_STEAM_ID": "76561198003234706",
-    "MISS_PAULING_COOKIE_DOMAIN": ".pugs.tf",
-    "TF2_SERVERS": [
-        {
-            "name": "pugA",
-            "host": "pugs.tf",
-            "port": 27015
-        },
-        {
-            "name": "pugB",
-            "host": "pugs.tf",
-            "port": 27016
-        }
-    ]
+    "MISS_PAULING_COOKIE_DOMAIN": ".pugs.tf"
 }

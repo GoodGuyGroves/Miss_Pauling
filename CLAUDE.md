@@ -44,7 +44,6 @@ docker build -t miss-pauling . && docker run -p 8000:8000 -v pauling-data:/data 
 - Environment variables: secrets (`MISS_PAULING_API_SECRET_KEY`, `STEAM_API_KEY`, `DISCORD_CLIENT_SECRET`, `DISCORD_TOKEN`), `MISS_PAULING_DB_URL` or `MISS_PAULING_DB_PATH` (default `/data/sqlite.db` in the image), `MISS_PAULING_SETTINGS_FILE` and `FASTDL_SETTINGS_FILE` to point at ConfigMap mounts, `FASTDL_ENABLED`
 - Persistent state lives on one volume mounted at `/data`: the SQLite file, FastDL's map store (`maps_dir`, default `/data/maps`) and mapcycle state (`/data/mapcycle.json`)
 - Single replica: state is SQLite plus JSON files on that volume
-- TF2 server RCON passwords come from `TF2_RCON_PASSWORD_<NAME>` env vars (e.g. `TF2_RCON_PASSWORD_PUGA`), one per entry in `TF2_SERVERS`
 - The image is a two-stage build: mkdocs and the docs toolchain only exist in the builder stage; the runtime installs the section of `requirements.txt` above the `docs build only` marker
 - No log viewing or service control in the admin UI: the website runs separately from the game servers, so use `kubectl logs` and cluster tooling
 
@@ -56,13 +55,12 @@ Add or update a test in `tests/` before changing behaviour. Tests import the app
 
 ### Database Operations
 ```bash
-# from the repo root (alembic.ini lives here)
-# Create migration
-alembic revision --autogenerate -m "description"
-# Apply migrations
-alembic upgrade head
-# Database is automatically initialized when the website starts
+# from the repo root (alembic.ini lives here); MISS_PAULING_DB_PATH/URL select the database
+alembic upgrade head                                   # apply migrations
+alembic revision --autogenerate -m "description"       # after changing pauling/db/models.py
+alembic check                                          # fail if models and migrations have drifted
 ```
+`pauling/migrations/versions/253fab92af9a_baseline_schema.py` is the baseline (roles, users, user_roles, user_sessions). **The app runs `alembic upgrade head` itself at startup** (`pauling/db/migrate.py`, called from `pauling/main.py`), stamping a pre-Alembic database at the baseline first, so deployments never need a manual migration step. Workflow for a schema change: edit `pauling/db/models.py`, run `alembic revision --autogenerate -m "..."`, review the generated file, run `alembic check`, commit; the next boot applies it. This is safe only while the app runs as a single replica.
 
 ## Architecture Overview
 
@@ -72,7 +70,6 @@ alembic upgrade head
 - **Database**: SQLite with SQLAlchemy 2.0+ ORM, auto-initialization on startup
 - **Templates**: Server-side Jinja2 rendering with TailwindCSS
 - **Sessions**: HTTP-only cookie-based with CSRF protection
-- **Server Browser**: Live TF2 server monitoring via RCON (credentials from config/env, not the game server's files)
 - **Game History**: Recent match logs integration with logs.tf API
 - **Key principle**: Discord is required auth, Steam is optional linkable
 
@@ -100,7 +97,6 @@ Located in `pauling/db/models.py`:
 - **Auth flow**: `routers/auth.py` + `services/auth_service.py`
 - **Sessions/cookies/CSRF**: `auth/sessions.py`; **role system**: `auth/roles.py`
 - **Admin dashboard**: `routers/admin.py` provides `/admin` and `/admin/users`
-- **TF2 Integration**: `services/tf2_service.py` handles RCON queries for live server data
 - **Game Logs**: `services/logs_service.py` integrates with logs.tf API for match history
 - **Templates**: Use TailwindCSS classes, minimal vanilla JavaScript
 - **Steam integration**: Always use `steam_id64` as primary identifier
@@ -178,7 +174,6 @@ python admin_roles.py find-user <search_term>
 - **Session validation**: `/api/validate/session` - Returns user info including roles
 - **Role assignment**: `POST /admin/users/assign-role` - Assign/remove roles (CSRF protected)
 - **User data**: `GET /admin/users/data` - Get users list for AJAX updates
-- **Server status**: `GET /api/servers` - Live TF2 server data via RCON
 - **Recent games**: `GET /api/recent-games` - Last 10 games from logs.tf
 
 ### File Structure
@@ -190,7 +185,7 @@ Miss_Pauling/
 │   ├── auth/                # sessions, roles, security, steam_utils
 │   ├── db/                  # SQLAlchemy models, engine, repositories
 │   ├── routers/             # auth, profile, api, admin
-│   ├── services/            # auth_service, tf2_service, logs_service
+│   ├── services/            # auth_service, logs_service
 │   ├── models/              # Pydantic request/response models
 │   ├── migrations/          # Alembic migrations
 │   ├── templates/ static/   # Website UI

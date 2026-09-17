@@ -109,7 +109,7 @@ run instead of `latest`.
 ```bash
 cd /path/to/homelab
 cp gitops/workloads/miss-pauling/secrets.dec.example.yaml gitops/workloads/miss-pauling/secrets.dec.yaml
-# fill in the values (Discord app secrets, Steam key, RCON passwords, a long random API secret key)
+# fill in the values (Discord app secrets, Steam key, a long random API secret key)
 sops --encrypt gitops/workloads/miss-pauling/secrets.dec.yaml > gitops/workloads/miss-pauling/secrets.sops.yaml
 rm gitops/workloads/miss-pauling/secrets.dec.example.yaml
 ```
@@ -144,8 +144,9 @@ curl -s https://fastdl.pugs.tf/tf/cfg/mapcycle_pt_all.txt
 
 1. Copy `db/sqlite.db` and the maps directory from the old host into the PVC
    (`kubectl cp` into the running pod at `/data/sqlite.db` and `/data/maps/`,
-   then restart the pod). Skip this for a clean start; tables and roles are
-   created on first boot.
+   then restart the pod). On boot the app runs Alembic: a database from before
+   migrations existed is stamped at the baseline automatically, then upgraded.
+   Skip all of this for a clean start; the schema and roles are created on first boot.
 2. Point the game servers' `sv_downloadurl` at `https://fastdl.pugs.tf/tf` and
    add a cron job that fetches `https://fastdl.pugs.tf/tf/cfg/mapcycle_<name>.txt`
    into each server's `tf/cfg/`.
@@ -173,7 +174,6 @@ curl -s https://fastdl.pugs.tf/tf/cfg/mapcycle_pt_all.txt
 | `MISS_PAULING_API_SECRET_KEY` | yes | Signing key for auth tokens. |
 | `DISCORD_CLIENT_SECRET`, `DISCORD_TOKEN` | yes | Discord application secrets. |
 | `STEAM_API_KEY` | yes | Steam Web API key for account linking. |
-| `TF2_RCON_PASSWORD_<NAME>` | for the server browser | One per entry in `TF2_SERVERS`, name upper-cased with non-alphanumerics replaced by `_` (`TF2_RCON_PASSWORD_PUGA`, `TF2_RCON_PASSWORD_PUGB`). |
 | `MISS_PAULING_COOKIE_DOMAIN` | no | Defaults to `.pugs.tf` from `settings.json`, which is what production needs so the login cookie is shared between `www` and `fastdl`. Set it to an empty string when testing on `localhost`, otherwise browsers reject the cookie. |
 | `MISS_PAULING_DB_PATH` | no | SQLite file path. Defaults to `/data/sqlite.db` in the image. |
 | `MISS_PAULING_DB_URL` | no | Full SQLAlchemy URL; overrides `MISS_PAULING_DB_PATH` (use for Postgres). |
@@ -206,6 +206,6 @@ over the JSON files.
 
 - No systemd units, `journalctl` log viewer or service-restart buttons. The app
   runs separately from the game servers now; use `kubectl logs`.
-- No RCON password parsing from `server.cfg`; passwords come from env vars.
+- No server browser or RCON integration. It was removed when the site stopped running on the game server host; re-add it as a new feature if wanted.
 - No writing of mapcycle files into game server directories; they are served
   over HTTP instead.

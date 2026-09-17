@@ -10,14 +10,14 @@ from sqlalchemy.orm import Session
 
 from pauling.config import settings, TEMPLATES_DIR, STATIC_DIR, DOCS_SITE_DIR
 from pauling.routers import auth, profile, api, admin
-from pauling.db.database import engine, Base, get_db
+from pauling.db.database import engine, get_db
+from pauling.db.migrate import run_migrations
 from pauling.db.models import User, Role, UserRole, RoleType
 from pauling.models.auth import UserInfo
 from pauling.models.responses import HomePageContext
 
-# Initialize database tables and default data
-# Comment this out if using Alembic for migrations
-Base.metadata.create_all(bind=engine)
+# Bring the database schema up to date (creates it on first boot), then seed default data
+run_migrations(engine)
 
 # Create default roles if they don't exist
 from sqlalchemy.orm import sessionmaker
