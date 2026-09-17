@@ -24,10 +24,8 @@ ENV PYTHONDONTWRITEBYTECODE=1 \
 COPY --from=builder /runtime /usr/local
 
 WORKDIR /app
-COPY shared shared
-COPY website website
-COPY fastdl fastdl
-COPY admin_roles.py .
+COPY pauling pauling
+COPY admin_roles.py alembic.ini settings.json .
 COPY --from=builder /build/docs/site docs/site
 
 # Non-root user; /data holds all persistent state (SQLite, maps, mapcycle state). Mount a volume there.
@@ -39,4 +37,4 @@ USER app
 EXPOSE 8000
 
 # --proxy-headers trusts X-Forwarded-Proto/For from the ingress so generated URLs use https
-CMD ["uvicorn", "website.app.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]
+CMD ["uvicorn", "pauling.main:app", "--host", "0.0.0.0", "--port", "8000", "--proxy-headers", "--forwarded-allow-ips=*"]

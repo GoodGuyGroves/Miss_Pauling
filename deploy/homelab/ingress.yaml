@@ -1,0 +1,34 @@
+# Both hostnames go to the same Service; the app picks the website or FastDL from the Host header.
+# Do NOT add the oauth2-proxy middleware annotations: the site has its own Discord login and
+# fastdl.pugs.tf must stay anonymous so game clients can download maps.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: miss-pauling
+  annotations:
+    external-dns.alpha.kubernetes.io/target: "152.53.105.24"
+    external-dns.alpha.kubernetes.io/cloudflare-proxied: "false"
+spec:
+  ingressClassName: traefik-public
+  tls:
+    - secretName: miss-pauling-tls
+      hosts: [pugs.tf, www.pugs.tf, fastdl.pugs.tf]
+  rules:
+    - host: www.pugs.tf
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: miss-pauling, port: { name: http } } }
+    - host: pugs.tf
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: miss-pauling, port: { name: http } } }
+    - host: fastdl.pugs.tf
+      http:
+        paths:
+          - path: /
+            pathType: Prefix
+            backend: { service: { name: miss-pauling, port: { name: http } } }

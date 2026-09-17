@@ -3,3 +3,5 @@ __pycache__/
 docs/site/
 sqlite.db
 tf2/
+.env
+db/

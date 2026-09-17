@@ -1,0 +1,11 @@
+# All persistent state (SQLite database, uploaded maps, mapcycle state) lives on one volume mounted at /data.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: miss-pauling-data
+spec:
+  accessModes: ["ReadWriteOnce"]
+  # uses the default StorageClass (local-path)
+  resources:
+    requests:
+      storage: 20Gi   # TF2 maps are 20-100 MB each; size for the map store

@@ -1,0 +1,15 @@
+# One certificate for every hostname the Ingress serves. DNS-01 via Cloudflare, so it is
+# issued before the hosts resolve.
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: miss-pauling
+spec:
+  secretName: miss-pauling-tls
+  issuerRef:
+    name: letsencrypt-prod
+    kind: ClusterIssuer
+  dnsNames:
+    - pugs.tf
+    - www.pugs.tf
+    - fastdl.pugs.tf

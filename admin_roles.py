@@ -14,14 +14,11 @@ import sys
 import argparse
 from pathlib import Path
 
-# Add the root directory to sys.path
-root_dir = str(Path(__file__).parent)
-sys.path.append(root_dir)
 
 from sqlalchemy.orm import sessionmaker
-from shared.database import engine
-from shared.models import User, Role, UserRole, RoleType
-from shared.repositories import UserRepository
+from pauling.db.database import engine
+from pauling.db.models import User, Role, UserRole, RoleType
+from pauling.db.repositories import UserRepository
 
 
 def list_users(db):

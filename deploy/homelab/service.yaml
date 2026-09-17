@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: miss-pauling
+spec:
+  type: ClusterIP
+  selector:
+    app: miss-pauling
+  ports:
+    - name: http
+      port: 8000
+      targetPort: http

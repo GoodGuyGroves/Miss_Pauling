@@ -1,0 +1,14 @@
+# Copy this directory to homelab/gitops/workloads/miss-pauling/ .
+# The workloads ApplicationSet turns the directory name into both the Argo CD
+# Application name and the namespace, so the directory MUST be called miss-pauling.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+namespace: miss-pauling
+resources:
+  - pvc.yaml
+  - deployment.yaml
+  - service.yaml
+  - certificate.yaml
+  - ingress.yaml
+generators:
+  - secret-generator.yaml

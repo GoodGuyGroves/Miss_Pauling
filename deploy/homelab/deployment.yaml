@@ -1,0 +1,65 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: miss-pauling
+  labels:
+    app: miss-pauling
+spec:
+  replicas: 1                 # state is SQLite + JSON on an RWO volume: never scale this out
+  strategy:
+    type: Recreate            # RWO volume cannot be shared with a rolling replacement pod
+  selector:
+    matchLabels:
+      app: miss-pauling
+  template:
+    metadata:
+      labels:
+        app: miss-pauling
+    spec:
+      nodeSelector:
+        topology.kubernetes.io/region: eu-ams
+      securityContext:
+        fsGroup: 10001        # the image runs as uid/gid 10001; make the volume writable for it
+      containers:
+        - name: miss-pauling
+          image: ghcr.io/goodguygroves/miss-pauling:latest   # TODO: pin to a sha-xxxxxxx tag from the build workflow
+          ports:
+            - name: http
+              containerPort: 8000
+          env:
+            - name: environment          # lowercase on purpose: the settings class is case-sensitive
+              value: production
+            - name: MISS_PAULING_DB_PATH
+              value: /data/sqlite.db
+            - name: MISS_PAULING_COOKIE_DOMAIN
+              value: .pugs.tf
+            - name: MISS_PAULING_API_SECRET_KEY
+              valueFrom: { secretKeyRef: { name: miss-pauling-secrets, key: MISS_PAULING_API_SECRET_KEY } }
+            - name: DISCORD_CLIENT_SECRET
+              valueFrom: { secretKeyRef: { name: miss-pauling-secrets, key: DISCORD_CLIENT_SECRET } }
+            - name: DISCORD_TOKEN
+              valueFrom: { secretKeyRef: { name: miss-pauling-secrets, key: DISCORD_TOKEN } }
+            - name: STEAM_API_KEY
+              valueFrom: { secretKeyRef: { name: miss-pauling-secrets, key: STEAM_API_KEY } }
+            - name: TF2_RCON_PASSWORD_PUGA
+              valueFrom: { secretKeyRef: { name: miss-pauling-secrets, key: TF2_RCON_PASSWORD_PUGA } }
+            - name: TF2_RCON_PASSWORD_PUGB
+              valueFrom: { secretKeyRef: { name: miss-pauling-secrets, key: TF2_RCON_PASSWORD_PUGB } }
+          volumeMounts:
+            - name: data
+              mountPath: /data
+          readinessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 3
+            periodSeconds: 10
+          livenessProbe:
+            httpGet: { path: /healthz, port: http }
+            initialDelaySeconds: 10
+            periodSeconds: 30
+          resources:
+            requests: { cpu: 50m, memory: 128Mi }
+            limits: { memory: 512Mi }
+      volumes:
+        - name: data
+          persistentVolumeClaim:
+            claimName: miss-pauling-data

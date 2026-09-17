@@ -5,7 +5,9 @@
 **/*.pyc
 db/
 docs/site/
-website/.env
-fastdl/mapcycle.json
+.env
+pauling/fastdl/mapcycle.json
+tests/
+deploy/
 Dockerfile
 .dockerignore

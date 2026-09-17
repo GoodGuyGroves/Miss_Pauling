@@ -4,12 +4,15 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-Miss Pauling is a multi-service Python application for Team Fortress 2 communities consisting of:
+Miss Pauling is a single Python package, `pauling/`, serving Team Fortress 2 communities:
 
-1. **Website Service** (`website/`): FastAPI web application with Discord/Steam authentication and user profiles
-2. **FastDL Sub-application** (`fastdl/`): FastAPI sub-app for TF2 map distribution and mapcycle management, mounted inside the website process and served by hostname (`fastdl.pugs.tf`)
-3. **Documentation** (`docs/`): MkDocs-based documentation site for user guides
-4. **Shared Components** (`shared/`): Common database models and utilities
+1. **Website** (`pauling/main.py`, `routers/`, `services/`, `templates/`, `static/`): FastAPI app with Discord/Steam authentication, user profiles and the admin dashboard
+2. **FastDL sub-application** (`pauling/fastdl/`): TF2 map store and mapcycle manager, mounted inside the same process and served by hostname (`fastdl.pugs.tf`)
+3. **Database layer** (`pauling/db/`): SQLAlchemy models, engine and repositories shared by both
+4. **Auth helpers** (`pauling/auth/`): sessions, cookies, CSRF, role checks, Steam utilities
+5. **Documentation** (`docs/`): MkDocs site served by the website at `/docs`
+
+One process, one package, one `requirements.txt`, one container image. There is no `website/`, `shared/` or `fastdl/` top-level directory any more; all imports are `from pauling....`.
 
 ## Common Development Commands
 
@@ -23,8 +26,8 @@ pip install -r requirements.txt
 ### Running Services
 ```bash
 # Website + FastDL (single process, port 8000). Run from the repo root; no cwd assumptions.
-uvicorn website.app.main:app --host 0.0.0.0 --port 8000 --reload
-# FastDL is served on the hosts listed in fastdl/settings.json, e.g. http://fastdl.localhost:8000/
+uvicorn pauling.main:app --host 0.0.0.0 --port 8000 --reload
+# FastDL is served on the hosts listed in pauling/fastdl/settings.json, e.g. http://fastdl.localhost:8000/
 
 # Documentation site, served via website at /docs when docs/site exists (mkdocs is in the root requirements)
 cd docs && mkdocs build
@@ -34,7 +37,7 @@ docker build -t miss-pauling . && docker run -p 8000:8000 -v pauling-data:/data 
 ```
 
 ### Deployment (Kubernetes)
-**Read `README.md` before deploying.** It has the checklist, the full environment variable table and the cross-host login flow. Summary:
+**Read `README.md` before deploying.** It walks through the homelab Argo CD conventions step by step; ready-to-copy Kustomize manifests are in `deploy/homelab/` (copy to `homelab/gitops/workloads/miss-pauling/`) and `.github/workflows/build-image.yml` publishes the arm64+amd64 image to `ghcr.io/goodguygroves/miss-pauling`. Summary:
 - Set `environment=production` on the pod (lowercase). Otherwise cookies lack `Secure` and the Discord callback leaks the session token into the FastDL return URL
 - One image (`Dockerfile`) runs website + FastDL with uvicorn behind the ingress; `--proxy-headers` is enabled so `X-Forwarded-Proto` is honoured
 - Probe endpoint: `GET /healthz` (checks the database connection)
@@ -45,9 +48,15 @@ docker build -t miss-pauling . && docker run -p 8000:8000 -v pauling-data:/data 
 - The image is a two-stage build: mkdocs and the docs toolchain only exist in the builder stage; the runtime installs the section of `requirements.txt` above the `docs build only` marker
 - No log viewing or service control in the admin UI: the website runs separately from the game servers, so use `kubectl logs` and cluster tooling
 
-### Database Operations (Website Service)
+### Tests
 ```bash
-cd website
+python -m pytest            # black-box HTTP suite in tests/; the behavioural spec for the app
+```
+Add or update a test in `tests/` before changing behaviour. Tests import the app only through the env-var import strings documented at the top of `tests/conftest.py`.
+
+### Database Operations
+```bash
+# from the repo root (alembic.ini lives here)
 # Create migration
 alembic revision --autogenerate -m "description"
 # Apply migrations
@@ -68,16 +77,16 @@ alembic upgrade head
 - **Key principle**: Discord is required auth, Steam is optional linkable
 
 ### FastDL Architecture
-- **Deployment**: Not a separate process. `website/app/main.py` mounts `fastdl.app:app` with Starlette `Host` routes for the hostnames in `fastdl/settings.json`; all other hosts fall through to the website. Disable with `FASTDL_ENABLED: false`.
+- **Deployment**: Not a separate process. `pauling/main.py` mounts `pauling.fastdl.app:app` with Starlette `Host` routes for the hostnames in `pauling/fastdl/settings.json`; all other hosts fall through to the website. Disable with `FASTDL_ENABLED: false`.
 - **Standalone map store**: maps live in `maps_dir` on the FastDL volume; nothing is read from or written to a game server's filesystem
 - **File serving**: TF2 map files via `/tf/maps/{filename}` endpoints
 - **Mapcycle management**: Toggle maps in/out of named mapcycles (requires helper+ privileges); servers download the result from `/tf/cfg/mapcycle_{name}.txt`
 - **Map deletion**: Delete map files (requires helper+ privileges)
-- **Configuration**: `fastdl/settings.json` (loaded relative to the package, not the cwd)
+- **Configuration**: `pauling/fastdl/settings.json` (loaded relative to the package, not the cwd)
 - **Auth**: Uses the website's session and role helpers directly against the shared database. The session cookie is shared across subdomains via `MISS_PAULING_COOKIE_DOMAIN` (set to `.pugs.tf` in production).
 
 ### Shared Database Schema
-Located in `shared/models.py`:
+Located in `pauling/db/models.py`:
 - **Users**: Discord ID (required), Steam IDs (optional), profile data
 - **UserSessions**: Active login sessions with expiration
 - **Roles**: Available user roles (superadmin, administrator, moderator, helper, captain, user)
@@ -85,24 +94,24 @@ Located in `shared/models.py`:
 
 ## Service-Specific Notes
 
-### Website Service (`website/`)
-- **Entry point**: `app/main.py` (auto-creates database tables and default roles)
-- **Config**: `app/core/config.py` loads from `settings.json`
-- **Auth flow**: `app/routers/auth.py` + `app/services/auth_service.py`
-- **Role system**: `app/core/roles.py` provides decorators and utilities for RBAC
-- **Admin dashboard**: `app/routers/admin.py` provides `/admin` and `/admin/users`
-- **TF2 Integration**: `app/services/tf2_service.py` handles RCON queries for live server data
-- **Game Logs**: `app/services/logs_service.py` integrates with logs.tf API for match history
+### Website (`pauling/`)
+- **Entry point**: `main.py` (auto-creates database tables and default roles, mounts FastDL)
+- **Config**: `config.py` loads from `<repo>/settings.json` and `<repo>/.env`; exposes `PACKAGE_DIR`, `REPO_ROOT`, `TEMPLATES_DIR`, `STATIC_DIR`
+- **Auth flow**: `routers/auth.py` + `services/auth_service.py`
+- **Sessions/cookies/CSRF**: `auth/sessions.py`; **role system**: `auth/roles.py`
+- **Admin dashboard**: `routers/admin.py` provides `/admin` and `/admin/users`
+- **TF2 Integration**: `services/tf2_service.py` handles RCON queries for live server data
+- **Game Logs**: `services/logs_service.py` integrates with logs.tf API for match history
 - **Templates**: Use TailwindCSS classes, minimal vanilla JavaScript
 - **Steam integration**: Always use `steam_id64` as primary identifier
 - **Navigation**: Conditional UI elements based on user roles (`is_admin` template variable)
 
-### FastDL (`fastdl/`)
-- **Entry point**: `app.py` (sub-application, mounted by the website)
+### FastDL (`pauling/fastdl/`)
+- **Entry point**: `app.py` (sub-application, mounted by `pauling/main.py`)
 - **Map management**: `core/mapcycle.py` persists mapcycle membership in `mapcycle_state_file` and renders `mapcycle_{name}.txt` on request
 - **File uploads**: Size validation and extension checking
 - **API endpoints**: RESTful design for map operations
-- **Role enforcement**: `core/auth.py` provides `require_helper_or_above()` dependency built on `website/app/core/roles.py`
+- **Role enforcement**: `core/auth.py` provides `require_helper_or_above()` dependency built on `pauling/auth/roles.py`
 
 ### Documentation (`docs/`)
 - **Build**: `mkdocs build` (outputs to `site/`)
@@ -166,7 +175,7 @@ python admin_roles.py find-user <search_term>
 ```
 
 ### API Endpoints
-- **Session validation**: `/api/validate/session` - Returns user info including roles (for external clients; FastDL no longer uses it)
+- **Session validation**: `/api/validate/session` - Returns user info including roles
 - **Role assignment**: `POST /admin/users/assign-role` - Assign/remove roles (CSRF protected)
 - **User data**: `GET /admin/users/data` - Get users list for AJAX updates
 - **Server status**: `GET /api/servers` - Live TF2 server data via RCON
@@ -175,20 +184,24 @@ python admin_roles.py find-user <search_term>
 ### File Structure
 ```
 Miss_Pauling/
-├── website/          # Web application with auth
-│   ├── app/routers/admin.py     # Admin dashboard routes (includes logs WebSocket)
-│   ├── app/models/admin.py      # Admin Pydantic models
-│   ├── app/services/tf2_service.py    # TF2 RCON integration
-│   ├── app/services/logs_service.py   # logs.tf API integration
-│   ├── app/core/roles.py        # RBAC decorators and utilities
-│   ├── app/core/config.py       # Settings including TF2_SERVERS and LOGS_TF_UPLOADER_STEAM_ID
-│   └── templates/admin/         # Admin dashboard templates (dashboard, users)
-├── fastdl/          # FastDL sub-app, host-routed from the website process
-│   ├── app.py                  # FastDL FastAPI sub-application
-│   └── core/auth.py            # Role enforcement for FastDL
-├── docs/            # MkDocs documentation
-├── shared/          # Common database models
-├── admin_roles.py   # CLI admin tool
+├── pauling/                 # The application package
+│   ├── main.py              # FastAPI app; mounts FastDL by hostname
+│   ├── config.py            # Settings (settings.json + .env + env vars)
+│   ├── auth/                # sessions, roles, security, steam_utils
+│   ├── db/                  # SQLAlchemy models, engine, repositories
+│   ├── routers/             # auth, profile, api, admin
+│   ├── services/            # auth_service, tf2_service, logs_service
+│   ├── models/              # Pydantic request/response models
+│   ├── migrations/          # Alembic migrations
+│   ├── templates/ static/   # Website UI
+│   └── fastdl/              # FastDL sub-app: app.py, core/, templates/, static/, settings.json
+├── tests/                   # Black-box HTTP test suite (pytest)
+├── deploy/homelab/          # Kustomize manifests for the homelab Argo CD cluster
+├── docs/                    # MkDocs documentation
+├── admin_roles.py           # CLI admin tool
+├── alembic.ini
+├── settings.json            # Non-secret website settings (committed)
+├── Dockerfile               # Two-stage Alpine image
 ├── .github/dependabot.yml   # Grouped weekly dependency PRs
-└── requirements.txt # Single dependency file for website, FastDL and docs
+└── requirements.txt         # Runtime deps, then docs-only, then dev/test
 ```

@@ -60,3 +60,6 @@ requests==2.33.0
 six==1.17.0
 urllib3==2.7.0
 watchdog==6.0.0
+
+# --- development/test only ---
+pytest==9.1.1
