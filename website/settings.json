@@ -5,40 +5,17 @@
     "STEAM_OPENID_REALM": "https://www.pugs.tf",
     "STEAM_OPENID_CALLBACK_URL": "https://www.pugs.tf/auth/steam/callback",
     "LOGS_TF_UPLOADER_STEAM_ID": "76561198003234706",
+    "MISS_PAULING_COOKIE_DOMAIN": ".pugs.tf",
     "TF2_SERVERS": [
         {
             "name": "pugA",
             "host": "pugs.tf",
-            "port": 27015,
-            "dir": "/home/steam/servers/tf2/pugA/"
+            "port": 27015
         },
         {
             "name": "pugB",
             "host": "pugs.tf",
-            "port": 27016,
-            "dir": "/home/steam/servers/tf2/pugB/"
+            "port": 27016
         }
-    ],
-    "SYSTEMD_SERVICES": {
-        "tf2-puga": {
-            "display_name": "PugA",
-            "description": "Pug A dedicated TF2 server",
-            "journalctl_args": ["--user", "-u", "pugA"]
-        },
-        "tf2-pugb": {
-            "display_name": "PugB",
-            "description": "Pug B dedicated TF2 server",
-            "journalctl_args": ["--user", "-u", "pugB"]
-        },
-        "pugstf-fastdl": {
-            "display_name": "FastDL",
-            "description": "The fastdl.pugs.tf FastDL service",
-            "journalctl_args": ["--user", "-u", "fastdl"]
-        },
-        "pugstf-website": {
-            "display_name": "pugs.tf",
-            "description": "The www.pugs.tf website service",
-            "journalctl_args": ["--user", "-u", "pugstf"]
-        }
-    }
+    ]
 }

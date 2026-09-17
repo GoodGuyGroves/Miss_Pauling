@@ -1,58 +1,40 @@
-import sys
+"""
+FastDL sub-application.
+
+Mounted inside the website process via Starlette host-based routing, so it is
+served for the hosts listed in fastdl/settings.json (e.g. fastdl.pugs.tf) while
+sharing the website's process, virtualenv, database and session cookies.
+"""
 from pathlib import Path
-# Add the repository root to Python path so we can import shared modules
-sys.path.append(str(Path(__file__).parent.parent))
 
 from fastapi import FastAPI, File, UploadFile, HTTPException, Request, Depends
-from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
-from fastapi.middleware.cors import CORSMiddleware
-from fastapi.middleware.trustedhost import TrustedHostMiddleware
 from sqlalchemy.orm import Session
 from urllib.parse import urlencode
 import aiofiles
-from core.config import settings
-from core.mapcycle import mapcycle_manager
-from core.auth import get_current_user, require_auth, require_helper_or_above, AuthenticatedUser
-from core.tf2_versions import tf2_sort_key
+
+from fastdl.core.config import settings, FASTDL_DIR
+from fastdl.core.mapcycle import mapcycle_manager
+from fastdl.core.auth import get_current_user, require_auth, require_helper_or_above, AuthenticatedUser
+from fastdl.core.tf2_versions import tf2_sort_key
 from shared.database import get_db
-from shared.models import User, UserSession
+from shared.repositories import UserRepository
+from website.app.core.sessions import create_session_cookie, clear_session_cookie
 
-app = FastAPI()
-
-app.add_middleware(TrustedHostMiddleware, allowed_hosts=settings.allowed_hosts)
-
-@app.middleware("http")
-async def proxy_headers_middleware(request: Request, call_next):
-    if request.headers.get("x-forwarded-proto") == "https":
-        request.scope["scheme"] = "https"
-    response = await call_next(request)
-    return response
-
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=settings.cors_origins,
-    allow_credentials=True,
-    allow_methods=settings.cors_methods,
-    allow_headers=settings.cors_headers,
-)
-
-print(settings)
-for server in settings.servers:
-    print(server.name, server.tf_dir)
-print(f"Maps dir: {settings.maps_dir}")
+app = FastAPI(title="pugs.tf FastDL", docs_url=None, redoc_url=None, openapi_url=None)
 
 MAX_FILE_SIZE = settings.max_map_file_size * 1024 * 1024
 
-templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory=str(FASTDL_DIR / "templates"))
+app.mount("/static", StaticFiles(directory=str(FASTDL_DIR / "static")), name="static")
 
 
 @app.get("/", response_class=HTMLResponse)
 async def index(request: Request, user: AuthenticatedUser = Depends(get_current_user)):
     """Serve the HTML frontend"""
-    return templates.TemplateResponse("index.html", {"request": request, "user": user})
+    return templates.TemplateResponse(request, "index.html", {"request": request, "user": user})
 
 @app.get("/maps")
 async def list_maps():
@@ -125,7 +107,19 @@ async def upload_map(file: UploadFile = File(...)):
 
 @app.get("/tf/", response_class=HTMLResponse)
 async def browse_tf(request: Request):
-    return templates.TemplateResponse("tf_index.html", {"request": request})
+    return templates.TemplateResponse(request, "tf_index.html", {"request": request})
+
+@app.get("/tf/cfg/", response_class=HTMLResponse)
+async def browse_cfg(request: Request):
+    files = [f"mapcycle_{name}.txt" for name in settings.mapcycles]
+    return templates.TemplateResponse(request, "cfg_index.html", {"files": files})
+
+@app.get("/tf/cfg/mapcycle_{name}.txt", response_class=PlainTextResponse)
+async def serve_mapcycle(name: str):
+    """Serve a mapcycle file for TF2 servers to download (e.g. on startup or via a cron job)"""
+    if name not in settings.mapcycles:
+        raise HTTPException(status_code=404, detail="Mapcycle not found")
+    return PlainTextResponse(mapcycle_manager.render_mapcycle(name))
 
 @app.get("/tf/maps/", response_class=HTMLResponse)
 async def browse_maps(request: Request):
@@ -137,7 +131,7 @@ async def browse_maps(request: Request):
                 files.append(file_path.name)
         
         files.sort(key=tf2_sort_key)
-        return templates.TemplateResponse("maps_index.html", {"request": request, "files": files})
+        return templates.TemplateResponse(request, "maps_index.html", {"request": request, "files": files})
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
 
@@ -241,35 +235,27 @@ async def delete_map(
 async def login_redirect(request: Request):
     """Redirect to main website for login, with return URL back to FastDL"""
     # Get the current URL to return to after login
-    return_url = str(request.url_for("login_callback"))
+    return_url = f"{request.base_url}login/callback"
     
     # Redirect to main website login with return parameter
     base_url = str(settings.website_base_url).rstrip('/')
     website_login_url = f"{base_url}/auth/redirect-login?{urlencode({'return_to': return_url})}"
     return RedirectResponse(url=website_login_url)
 
-# TODO: Roll back this development vs production hack once pugs.lumabyte.io and fastdl.pugs.lumabyte.io subdomains have propagated
-# Note to self: make sure newt is forwarding the above subdomains to both the website and fastdl running processes locally
 @app.get("/login/callback")
 async def login_callback(request: Request, session_token: str = None):
-    """Handle login callback from main website"""
-    # For development: website can pass session token as query param
-    # For production: this should work via shared domain cookies
+    """
+    Handle login callback from the main website.
+
+    In production the session cookie is shared across subdomains via
+    MISS_PAULING_COOKIE_DOMAIN, so nothing needs to be done here. In development
+    (no shared cookie domain) the website passes the session token as a query
+    parameter and it is set as a cookie on the FastDL host.
+    """
+    response = RedirectResponse(url="/")
     if session_token:
-        # Set the session cookie on FastDL's domain
-        response = RedirectResponse(url="/")
-        response.set_cookie(
-            key="session_token",
-            value=session_token,
-            httponly=True,
-            secure=False,  # Development
-            samesite="lax",
-            max_age=24 * 7 * 3600  # 1 week
-        )
-        return response
-    else:
-        # Normal redirect without cookie
-        return RedirectResponse(url="/")
+        create_session_cookie(response, session_token)
+    return response
 
 @app.api_route("/logout", methods=["GET", "POST"])
 async def logout(request: Request, db: Session = Depends(get_db)):
@@ -278,17 +264,10 @@ async def logout(request: Request, db: Session = Depends(get_db)):
     session_token = request.cookies.get("session_token")
     if session_token:
         # Invalidate session in database (shared with main website)
-        from shared.repositories import UserRepository
         UserRepository.invalidate_session(db, session_token)
-    
+
     # Clear session cookie and redirect back to FastDL
     response = RedirectResponse(url="/?success=Logged out successfully")
-    response.delete_cookie(
-        key="session_token",
-        httponly=True,
-        secure=False,  # Development
-        samesite="lax"
-    )
-    
+    clear_session_cookie(response)
     return response
 

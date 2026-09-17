@@ -1,14 +1,42 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict, JsonConfigSettingsSource, PydanticBaseSettingsSource
-from pydantic import HttpUrl, Field, SecretStr, model_validator, BaseModel
+from pydantic import HttpUrl, Field, SecretStr, BaseModel
 from typing import List, Optional, Dict, Any
 from functools import lru_cache
+from pathlib import Path
+import os
+import re
+
+# The website package directory (contains templates/, static/, settings.json, .env).
+# All paths are resolved relative to this so the process can be started from any cwd.
+WEBSITE_DIR = Path(__file__).resolve().parent.parent.parent
+TEMPLATES_DIR = WEBSITE_DIR / "templates"
+STATIC_DIR = WEBSITE_DIR / "static"
+DOCS_SITE_DIR = WEBSITE_DIR.parent / "docs" / "site"
+
+# Non-secret settings file. Override to point at e.g. a Kubernetes ConfigMap mount.
+SETTINGS_FILE = Path(os.environ.get("MISS_PAULING_SETTINGS_FILE", WEBSITE_DIR / "settings.json"))
 
 class TF2Server(BaseModel):
-    """TF2 server configuration"""
+    """
+    TF2 server configuration for the server browser.
+
+    The website no longer runs on the game server host, so credentials come from
+    configuration rather than the server's own server.cfg. The RCON password is
+    read from the environment variable TF2_RCON_PASSWORD_<NAME> (name upper-cased,
+    non-alphanumerics replaced by '_'), falling back to `rcon_password` here.
+    """
     name: str = Field(description="Display name for the server")
     host: str = Field(description="Server hostname or IP address")
     port: int = Field(description="Server port")
-    dir: str = Field(description="Server directory path containing tf/cfg/server.cfg")
+    rcon_password: Optional[str] = Field(default=None, description="RCON password (prefer the TF2_RCON_PASSWORD_<NAME> env var)")
+    password_protected: bool = Field(default=False, description="Whether players need sv_password to join")
+
+    @property
+    def rcon_password_env_var(self) -> str:
+        return "TF2_RCON_PASSWORD_" + re.sub(r"[^A-Za-z0-9]", "_", self.name).upper()
+
+    def resolve_rcon_password(self) -> Optional[str]:
+        return os.environ.get(self.rcon_password_env_var) or self.rcon_password
 
 class Settings(BaseSettings):
     # Load sensitive values from website.app.env
@@ -68,9 +96,18 @@ class Settings(BaseSettings):
     MISS_PAULING_CORS_CREDENTIALS: bool = Field(default=True)
     
     MISS_PAULING_SESSION_EXPIRY_HOURS: int = 24 * 7  # 1 week
-    
-    # Systemd services configuration for log streaming
-    SYSTEMD_SERVICES: Dict[str, Any] = Field(default_factory=dict)
+    MISS_PAULING_COOKIE_DOMAIN: Optional[str] = Field(
+        default=None,
+        description="Domain attribute for session/CSRF cookies. Set to '.pugs.tf' in production so the login "
+                    "cookie is shared between www.pugs.tf and fastdl.pugs.tf. Leave unset for localhost development."
+    )
+
+    # FastDL sub-application (fastdl/), served for the hosts listed in fastdl/settings.json
+    FASTDL_ENABLED: bool = Field(
+        default=True,
+        description="Mount the FastDL sub-application in this process. Disable for local development "
+                    "when the map directories in fastdl/settings.json don't exist."
+    )
     
     # TF2 servers configuration for server browser
     TF2_SERVERS: List[TF2Server] = Field(default_factory=list)
@@ -85,43 +122,24 @@ class Settings(BaseSettings):
         default="development",
         description="The environment this app is running in. Use the long form of the names, eg development and production"
     )
-    MISS_PAULING_DB_TYPE: str = Field(
-        default="sqlite",
-        description="The type of DB to use. Defaults to sqlite."
-    )
-    MISS_PAULING_DB_PATH: Optional[str] = Field(
-        default="../db/sqlite.db",
-        description="Path to SQLite database file (required when MISS_PAULING_DB_TYPE is 'sqlite')"
-    )
+    # Database location is read from the environment by shared/database.py
+    # (MISS_PAULING_DB_URL, else MISS_PAULING_DB_PATH, else <repo>/db/sqlite.db).
+    # They are declared here only so they show up in the settings documentation.
     MISS_PAULING_DB_URL: Optional[str] = Field(
         default=None,
-        description="The URL to the chosen database (required when MISS_PAULING_DB_TYPE is 'postgresql')"
+        description="Full SQLAlchemy database URL. Takes precedence over MISS_PAULING_DB_PATH."
+    )
+    MISS_PAULING_DB_PATH: Optional[str] = Field(
+        default=None,
+        description="Path to the SQLite database file, e.g. a persistent volume mount in Kubernetes."
     )
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=WEBSITE_DIR / ".env",
         env_file_encoding="utf-8",
         extra="ignore",
         case_sensitive=True
     )
-
-    @model_validator(mode='after')
-    def validate_db_config(self):
-        """Validate database configuration based on DB type"""
-        db_type = self.MISS_PAULING_DB_TYPE.lower()
-        
-        if db_type == "sqlite":
-            if not self.MISS_PAULING_DB_PATH:
-                raise ValueError("MISS_PAULING_DB_PATH is required when MISS_PAULING_DB_TYPE is 'sqlite'")
-            # Generate SQLite URL from path
-            self.MISS_PAULING_DB_URL = f"sqlite:///{self.MISS_PAULING_DB_PATH}"
-        elif db_type == "postgresql":
-            if not self.MISS_PAULING_DB_URL:
-                raise ValueError("MISS_PAULING_DB_URL is required when MISS_PAULING_DB_TYPE is 'postgresql'")
-        else:
-            raise ValueError(f"Unsupported database type: {db_type}. Supported types are 'sqlite' and 'postgresql'")
-        
-        return self
 
     @classmethod
     def settings_customise_sources(
@@ -137,8 +155,8 @@ class Settings(BaseSettings):
             env_settings,
             dotenv_settings,
             JsonConfigSettingsSource(
-                settings_cls, 
-                json_file='settings.json', 
+                settings_cls,
+                json_file=SETTINGS_FILE,
                 json_file_encoding='utf-8'
             ),
             file_secret_settings,

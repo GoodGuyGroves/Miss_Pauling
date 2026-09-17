@@ -22,4 +22,6 @@ Once a map has been added through this interface, it immediately becomes availab
 
 This management interface can also be used to add a map to (currently) one of two mapcycles. We have the "pt_official" and the "pt_all" mapcycles. To add a map to one of these mapcycles, you need to be an authenticated admin.
 
+The resulting mapcycle files are published at `https://fastdl.pugs.tf/tf/cfg/mapcycle_pt_official.txt` and `https://fastdl.pugs.tf/tf/cfg/mapcycle_pt_all.txt`. The game servers download these into their `tf/cfg/` directory; the FastDL server no longer writes to the game servers directly.
+
 ![A look at the mapcycles and delete features](./images/mapcycle-delete.png)

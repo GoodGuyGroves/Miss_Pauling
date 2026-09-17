@@ -4,13 +4,12 @@ from pathlib import Path
 from typing import Dict, List, Set
 from .config import settings
 
-MAPCYCLE_FILE = "mapcycle.json"
-
 class MapcycleManager:
-    """Manages mapcycle state and server mapcycle.txt files"""
+    """Manages which maps belong to each mapcycle and renders mapcycle files for servers to download"""
     
     def __init__(self):
-        self.mapcycle_path = Path(MAPCYCLE_FILE)
+        self.mapcycle_path = Path(settings.mapcycle_state_file)
+        self.mapcycle_path.parent.mkdir(parents=True, exist_ok=True)
     
     def load_mapcycle_state(self) -> Dict[str, List[str]]:
         """Load all mapcycles from mapcycle.json"""
@@ -57,23 +56,16 @@ class MapcycleManager:
             name = name[:-4]
         return name
     
-    def update_server_mapcycles(self) -> None:
-        """Update mapcycle_*.txt files for all configured servers"""
-        mapcycles = self.load_mapcycle_state()
-        
-        for server in settings.servers:
-            cfg_dir = Path(server.tf_dir) / "cfg"
-            cfg_dir.mkdir(exist_ok=True)
-            
-            # Create a separate mapcycle file for each configured mapcycle
-            for mapcycle_name, maps in mapcycles.items():
-                mapcycle_file = cfg_dir / f"mapcycle_{mapcycle_name}.txt"
-                
-                # Write enabled maps to mapcycle_{name}.txt
-                with open(mapcycle_file, 'w') as f:
-                    for map_name in maps:
-                        f.write(f"{map_name}\n")
-    
+    def render_mapcycle(self, mapcycle_name: str) -> str:
+        """
+        Render a mapcycle as the contents of a TF2 mapcycle_{name}.txt file.
+        Game servers fetch this over HTTP from /tf/cfg/mapcycle_{name}.txt.
+        """
+        if mapcycle_name not in settings.mapcycles:
+            raise ValueError(f"Unknown mapcycle: {mapcycle_name}")
+        maps = self.load_mapcycle_state()[mapcycle_name]
+        return "".join(f"{map_name}\n" for map_name in maps)
+
     def toggle_map_in_mapcycle(self, filename: str, mapcycle_name: str) -> bool:
         """Toggle a map's inclusion in a specific mapcycle. Returns new state (True=enabled)"""
         if mapcycle_name not in settings.mapcycles:
@@ -90,7 +82,6 @@ class MapcycleManager:
             is_enabled = True
         
         self.save_mapcycle_state(mapcycles)
-        self.update_server_mapcycles()
         
         return is_enabled
     
@@ -121,7 +112,6 @@ class MapcycleManager:
                 mapcycles[mapcycle_name].remove(map_name)
         
         self.save_mapcycle_state(mapcycles)
-        self.update_server_mapcycles()
 
 # Global instance
 mapcycle_manager = MapcycleManager()

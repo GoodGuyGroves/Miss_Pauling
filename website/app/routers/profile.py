@@ -1,5 +1,5 @@
 from fastapi import APIRouter
-from website.app.core.config import settings
+from website.app.core.config import settings, TEMPLATES_DIR
 from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi import Request, Depends
@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from shared.database import get_db
 
 # Configure templates and static files
-templates = Jinja2Templates(directory="templates")
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
 
 router = APIRouter(tags=["User profile"])
 
@@ -36,7 +36,7 @@ async def profile_page(request: Request, error: str = None, success: str = None,
     # Generate CSRF token for forms
     csrf_token = generate_csrf_token()
     
-    response = templates.TemplateResponse("profile.html", {
+    response = templates.TemplateResponse(request, "profile.html", {
         "request": request,
         "user": user,
         "error": error,

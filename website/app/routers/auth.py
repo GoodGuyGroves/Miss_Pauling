@@ -81,12 +81,11 @@ async def discord_callback(
             except Exception as e:
                 print(f"Error decoding state parameter: {e}")
                 # Continue with normal flow if state decoding fails
-        # TODO: Roll back this development vs production hack once pugs.lumabyte.io and fastdl.pugs.lumabyte.io subdomains have propagated
-        # Note to self: make sure newt is forwarding the above subdomains to both the website and fastdl running processes locally
         if external_return:
-            # For development: pass session token as query param for cross-port auth
-            # For production: this won't be needed due to shared domain cookies
-            from urllib.parse import urlencode, urlparse, parse_qs
+            # In production the session cookie is shared across subdomains via
+            # MISS_PAULING_COOKIE_DOMAIN, so a plain redirect is enough. In development
+            # (localhost, no shared cookie domain) pass the token to the FastDL host
+            # so its /login/callback can set the cookie itself.
             if settings.environment == "development":
                 # Add session token to the return URL
                 separator = "&" if "?" in external_return else "?"

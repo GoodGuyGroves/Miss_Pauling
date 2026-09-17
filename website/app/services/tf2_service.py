@@ -2,7 +2,6 @@
 
 import asyncio
 import re
-from pathlib import Path
 from typing import List, Optional, Dict, Any
 from pydantic import BaseModel, Field
 import logging
@@ -67,39 +66,7 @@ class TF2Service:
     
     def __init__(self):
         self.servers = settings.TF2_SERVERS
-    
-    def _parse_server_cfg(self, server_dir: str) -> Dict[str, str]:
-        """Parse server.cfg file to extract rcon_password and sv_password"""
-        cfg_path = Path(server_dir) / "tf" / "cfg" / "server.cfg"
-        config = {}
-        
-        if not cfg_path.exists():
-            logger.warning(f"Server config not found: {cfg_path}")
-            return config
-            
-        try:
-            with open(cfg_path, 'r', encoding='utf-8') as f:
-                for line in f:
-                    line = line.strip()
-                    if line.startswith('//') or not line:
-                        continue
-                    
-                    # Match patterns like: rcon_password "value" or sv_password "value"
-                    if 'rcon_password' in line:
-                        match = re.search(r'rcon_password\s+"([^"]*)"', line)
-                        if match:
-                            config['rcon_password'] = match.group(1)
-                    
-                    if 'sv_password' in line:
-                        match = re.search(r'sv_password\s+"([^"]*)"', line)
-                        if match:
-                            config['sv_password'] = match.group(1)
-                            
-        except Exception as e:
-            logger.error(f"Error parsing server config {cfg_path}: {e}")
-            
-        return config
-    
+
     async def _query_server_rcon(self, server: TF2Server, rcon_password: str) -> Optional[Dict[str, Any]]:
         """Query a single server via RCON"""
         if not RCONClient:
@@ -339,13 +306,11 @@ class TF2Service:
         import time
         start_time = time.time()
         
-        # Parse server config for passwords
-        config = self._parse_server_cfg(server.dir)
-        rcon_password = config.get('rcon_password')
-        sv_password = config.get('sv_password', '')
-        
+        rcon_password = server.resolve_rcon_password()
+        sv_password = server.password_protected
+
         if not rcon_password:
-            logger.warning(f"No RCON password found for {server.name}")
+            logger.warning(f"No RCON password configured for {server.name} (set {server.rcon_password_env_var})")
             return ServerStatus(
                 name=server.name,
                 host=server.host,

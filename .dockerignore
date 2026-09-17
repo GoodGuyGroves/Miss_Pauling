@@ -1,0 +1,11 @@
+.git
+.github
+.venv
+**/__pycache__
+**/*.pyc
+db/
+docs/site/
+website/.env
+fastdl/mapcycle.json
+Dockerfile
+.dockerignore

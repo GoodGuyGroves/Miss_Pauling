@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Index of /tf/cfg/{% endblock %}
+
+{% block content %}
+<div class="directory-listing">
+    <h1>Index of /tf/cfg/</h1>
+    <hr>
+    <pre>
+<a href="../">../</a>
+{% for filename in files %}
+<a href="{{ filename }}">{{ filename }}</a>
+{% endfor %}
+    </pre>
+    <hr>
+</div>
+{% endblock %}

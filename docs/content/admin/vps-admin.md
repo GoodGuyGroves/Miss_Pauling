@@ -81,13 +81,9 @@ systemctl --user status pugA_demos.timer
 
 #### Map Manager
 
-I have also created a service named `map-manager` that can be used to upload maps directly to the server, go here to upload new maps to the servers: https://fastdl.pugs.tf/. For more info on the Map Manager, [see here](./map-management/index.md).
+The Map Manager at https://fastdl.pugs.tf/ can be used to upload maps directly to the server. For more info on the Map Manager, [see here](./map-management/index.md).
 
-To ensure the `systemd` service that runs this is operational:
-
-```bash
-systemctl --user status map-manager
-```
+It is served by the same process (and Kubernetes deployment) as the website, so if https://www.pugs.tf is up, the Map Manager is too.
 
 #### Manual
 

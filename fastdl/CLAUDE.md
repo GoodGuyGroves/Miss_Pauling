@@ -1,77 +1,42 @@
 # CLAUDE.md
 
-This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this directory.
 
-## Project Overview
+## Overview
 
-This is a FastAPI-based file server and web interface for managing Team Fortress 2 (TF2) map files. It provides a FastDL (Fast Download) service for game servers and includes a web UI for uploading, managing, and organizing maps into mapcycles.
+`fastdl/` is the FastDL (Fast Download) map server and map-manager web UI for the TF2 servers. It is a standalone map store: maps are uploaded to and served from its own volume, and it never touches a game server's filesystem. Game servers point `sv_downloadurl` at it and can fetch their mapcycle files from it. It is **not a separate process**: `fastdl/app.py` defines a FastAPI sub-application that `website/app/main.py` mounts with Starlette host-based routing. Requests whose `Host` header matches one of the `hosts` in `fastdl/settings.json` (e.g. `fastdl.pugs.tf`) are served by this app; every other host is served by the website. One process, one container image, one database.
 
-## Development Setup
+## Running
 
-### Environment Setup
+There is no standalone entry point. Run the website (from the repo root) and point a FastDL hostname at it:
+
 ```bash
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
+uvicorn website.app.main:app --host 0.0.0.0 --port 8000 --reload
+# then browse http://fastdl.localhost:8000/  (fastdl.localhost is in the default hosts list)
 ```
 
-### Running the Application
-```bash
-# Development mode with auto-reload
-python main.py
-
-# Production mode via run script
-./run.sh
-
-# Direct uvicorn command
-uvicorn main:app --host 0.0.0.0 --port 8000
-```
+Set `FASTDL_ENABLED: false` in `website/settings.json` (or `.env`) to run the website without FastDL, e.g. when the map directories don't exist locally.
 
 ## Architecture
 
-### Core Components
+- **`app.py`**: the FastAPI sub-app with all FastDL routes
+- **`core/config.py`**: Pydantic settings loaded from `fastdl/settings.json` (relative to this package, not the cwd; override with `FASTDL_SETTINGS_FILE`)
+- **`core/auth.py`**: dependencies (`get_current_user`, `require_auth`, `require_helper_or_above`) built on the website's session and role helpers in `website/app/core/`. No HTTP round trip, no duplicated role hierarchy.
+- **`core/mapcycle.py`**: mapcycle membership persisted in `mapcycle_state_file`; renders `mapcycle_{name}.txt` for `GET /tf/cfg/mapcycle_{name}.txt`
+- **`core/tf2_versions.py`**: map version parsing for sorting
+- **`templates/`, `static/`**: the map-manager UI
 
-- **`main.py`**: FastAPI application entry point with REST API endpoints for map management
-- **`core/config.py`**: Pydantic-based configuration management loading from `settings.json`
-- **`core/mapcycle.py`**: Manages TF2 server mapcycle files and state persistence
-- **`settings.json`**: Configuration file defining servers, paths, and application settings
-- **`templates/`**: Jinja2 HTML templates for the web interface
-- **`static/`**: CSS and JavaScript assets for the frontend
+## Configuration (`settings.json`)
 
-### Key Features
+- `hosts`: hostnames routed to this sub-app
+- `mapcycle_state_file`: where mapcycle membership is persisted (default `fastdl/mapcycle.json`; use a volume path in Kubernetes)
+- `maps_dir`: directory maps are stored in and served from (created if missing; `/data/maps` in the container)
+- `allowed_map_extensions`, `max_map_file_size` (MB), `mapcycles`
+- `website_base_url`: used for the login redirect to the website's Discord OAuth flow
 
-1. **Map Upload & Management**: RESTful endpoints for uploading .bsp files with size validation
-2. **Mapcycle Management**: Toggle maps in/out of server rotation lists across multiple mapcycles
-3. **FastDL Server**: Serves map files directly via `/tf/maps/{filename}` endpoints
-4. **Multi-Server Support**: Manages mapcycle files for multiple TF2 server instances
-5. **Web Interface**: HTML frontend for browsing and managing maps
+## Authentication
 
-### Configuration System
-
-The application uses a centralized configuration in `settings.json`:
-- `servers`: Array of TF2 server configurations with paths to tf directories
-- `maps_dir`: Directory where map files are stored and served from
-- `mapcycles`: List of available mapcycle names (e.g., "pt_official", "pt_all")
-- File validation settings for allowed extensions and size limits
-- CORS and security settings
-
-### Data Persistence
-
-- **`mapcycle.json`**: Persists which maps are enabled in each mapcycle
-- **Server mapcycle files**: Generates `mapcycle_{name}.txt` files in each server's cfg directory
-
-## File Structure
-
-```
-├── main.py              # FastAPI app with REST endpoints
-├── core/
-│   ├── config.py        # Settings and validation
-│   └── mapcycle.py      # Mapcycle management logic
-├── templates/           # Jinja2 HTML templates
-├── static/             # Frontend assets (CSS/JS)
-├── settings.json       # Application configuration
-└── requirements.txt    # Python dependencies
-```
+The session cookie is shared with the website. In production set `MISS_PAULING_COOKIE_DOMAIN` to `.pugs.tf` in the website settings so the cookie set on `www.pugs.tf` is sent to `fastdl.pugs.tf`. In development (no cookie domain) the website's OAuth callback appends the session token to the FastDL return URL and `/login/callback` sets it as a cookie on the FastDL host.
 
 ## API Endpoints
 
@@ -79,14 +44,7 @@ The application uses a centralized configuration in `settings.json`:
 - `GET /maps`: List all maps with metadata
 - `POST /upload`: Upload new map files
 - `GET /tf/maps/{filename}`: Serve map files (FastDL)
-- `POST /maps/{filename}/mapcycle`: Toggle map in mapcycle
-- `DELETE /maps/{filename}`: Delete map and remove from mapcycles
-
-## Development Notes
-
-- Uses async/await patterns throughout with aiofiles for file operations
-- Implements proper error handling with HTTP exceptions
-- File uploads include size validation and extension checking
-- Mapcycle state automatically syncs to server cfg directories
-- CORS middleware configured for cross-origin requests
-- TrustedHost middleware for security
+- `GET /tf/cfg/mapcycle_{name}.txt`: Rendered mapcycle file for game servers to download
+- `POST /maps/{filename}/mapcycle`: Toggle map in mapcycle (helper+)
+- `DELETE /maps/{filename}`: Delete map and remove from mapcycles (helper+)
+- `GET /login`, `GET /login/callback`, `GET|POST /logout`

@@ -30,11 +30,10 @@ def get_current_user_from_session(request: Request, db: Session) -> Optional[Use
 
 def create_session_cookie(response, session_token: str):
     """Set session cookie on response"""
-    # For production, this should be domain=".pugs.tf"
-    # For development, we'll handle cross-port auth via API calls instead
     response.set_cookie(
         key="session_token",
         value=session_token,
+        domain=settings.MISS_PAULING_COOKIE_DOMAIN,
         httponly=True,
         secure=True if settings.environment == "production" else False,
         samesite="lax",
@@ -45,6 +44,7 @@ def clear_session_cookie(response):
     """Clear session cookie"""
     response.delete_cookie(
         key="session_token",
+        domain=settings.MISS_PAULING_COOKIE_DOMAIN,
         httponly=True,
         secure=True if settings.environment == "production" else False,
         samesite="lax"
@@ -64,6 +64,7 @@ def set_csrf_cookie(response, csrf_token: str):
     response.set_cookie(
         key="csrf_token",
         value=csrf_token,
+        domain=settings.MISS_PAULING_COOKIE_DOMAIN,
         httponly=False,  # JavaScript needs to read this for forms
         secure=True if settings.environment == "production" else False,
         samesite="lax",

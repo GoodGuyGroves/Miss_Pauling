@@ -9,9 +9,11 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 from fastapi.responses import HTMLResponse
+from starlette.routing import Host
+from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from website.app.core.config import settings
+from website.app.core.config import settings, TEMPLATES_DIR, STATIC_DIR, DOCS_SITE_DIR
 from website.app.routers import auth, profile, api, admin
 from shared.database import engine, Base, get_db
 from shared.models import User, Role, UserRole, RoleType
@@ -55,12 +57,28 @@ app = FastAPI(
 )
 
 # Configure templates and static files
-templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory=str(TEMPLATES_DIR))
+app.mount("/static", StaticFiles(directory=str(STATIC_DIR)), name="static")
 
-# Add mkdocs to /docs
-docs_path = Path(__file__).parent.parent.parent / "docs" / "site"
-app.mount("/docs", StaticFiles(directory=str(docs_path), html=True), name="docs")
+# Serve the built mkdocs site at /docs when it exists (built with `mkdocs build` in docs/)
+if DOCS_SITE_DIR.is_dir():
+    app.mount("/docs", StaticFiles(directory=str(DOCS_SITE_DIR), html=True), name="docs")
+else:
+    print(f"WARNING: docs site not found at {DOCS_SITE_DIR}; /docs will not be served")
+
+
+@app.get("/healthz", include_in_schema=False)
+async def healthz(db: Annotated[Session, Depends(get_db)]) -> dict:
+    """Liveness/readiness probe: confirms the process is up and the database is reachable"""
+    db.execute(text("SELECT 1"))
+    return {"status": "ok"}
+
+# Behind the reverse proxy, report https so generated absolute URLs are correct
+@app.middleware("http")
+async def proxy_headers_middleware(request: Request, call_next):
+    if request.headers.get("x-forwarded-proto") == "https":
+        request.scope["scheme"] = "https"
+    return await call_next(request)
 
 # Add CORS middleware to allow requests from the frontend
 app.add_middleware(
@@ -118,7 +136,7 @@ async def root(
         csrf_token=csrf_token
     )
     
-    response = templates.TemplateResponse("home.html", {
+    response = templates.TemplateResponse(request, "home.html", {
         "request": request,
         "is_admin": is_admin,
         **context.model_dump()
@@ -132,3 +150,13 @@ app.include_router(profile.router)
 app.include_router(auth.router)
 app.include_router(api.router)
 app.include_router(admin.router)
+
+# Mount the FastDL sub-application by hostname. Host routes are inserted ahead of
+# the website's own routes so that e.g. fastdl.pugs.tf/ serves the map manager
+# rather than the website home page. Any other host falls through to the website.
+if settings.FASTDL_ENABLED:
+    from fastdl.app import app as fastdl_app
+    from fastdl.core.config import settings as fastdl_settings
+
+    for host in fastdl_settings.hosts:
+        app.router.routes.insert(0, Host(host, app=fastdl_app))
