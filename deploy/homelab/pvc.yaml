@@ -9,3 +9,26 @@ spec:
   resources:
     requests:
       storage: 20Gi   # TF2 maps are 20-100 MB each; size for the map store
+---
+# Maps live on the Hetzner Storage Box, not on the node. They are uploaded by
+# community members and cannot be asked for again, so they need to survive a node
+# rebuild — which local-path data does not.
+#
+# Deliberately a second volume rather than moving /data wholesale: that volume
+# also holds the SQLite database and mapcycle.json, and both are written in ways
+# that are unsafe on a network filesystem (SQLite locking; mapcycle.json is a
+# truncate-then-write, so a blip mid-write can empty it). Those stay on
+# local-path, where the nightly restic job already backs them up.
+#
+# The rclone-hetzner class templates remotePath as k8s/<namespace>/<pvc>, so this
+# claim resolves to k8s/miss-pauling/miss-pauling-maps.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: miss-pauling-maps
+spec:
+  accessModes: ["ReadWriteMany"]
+  storageClassName: rclone-hetzner
+  resources:
+    requests:
+      storage: 1Gi   # nominal: a FUSE mount does not enforce this

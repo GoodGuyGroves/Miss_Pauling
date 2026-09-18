@@ -44,6 +44,10 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /data
+            # Shadows /data/maps on the local-path volume. Anything previously
+            # there is no longer visible to the app.
+            - name: maps
+              mountPath: /data/maps
           readinessProbe:
             httpGet: { path: /healthz, port: http }
             initialDelaySeconds: 3
@@ -59,3 +63,6 @@ spec:
         - name: data
           persistentVolumeClaim:
             claimName: miss-pauling-data
+        - name: maps
+          persistentVolumeClaim:
+            claimName: miss-pauling-maps
