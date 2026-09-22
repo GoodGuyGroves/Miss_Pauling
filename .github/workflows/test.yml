@@ -1,0 +1,30 @@
+name: Test
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          # Match the runtime image (python:3.13-alpine in the Dockerfile)
+          python-version: "3.13"
+          cache: pip
+      # A pin conflict here is what breaks the image build, so fail fast on it
+      - run: pip install -r requirements.txt
+      - run: pip check
+      - run: python -m pytest
+      - run: alembic upgrade head && alembic check
+        env:
+          MISS_PAULING_DB_PATH: ${{ runner.temp }}/ci.db
+      - run: mkdocs build --strict
+        working-directory: docs
