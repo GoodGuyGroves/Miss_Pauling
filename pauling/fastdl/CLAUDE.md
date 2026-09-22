@@ -32,6 +32,7 @@ Set `FASTDL_ENABLED: false` in `settings.json` (or `.env`) at the repo root to r
 - `mapcycle_state_file`: where mapcycle membership is persisted (default `pauling/fastdl/mapcycle.json`; use a volume path in Kubernetes)
 - `maps_dir`: directory maps are stored in and served from (created if missing; `/data/maps` in the container)
 - `allowed_map_extensions`, `max_map_file_size` (MB), `mapcycles`
+- `auto_mapcycles`: mapcycle name -> filename prefixes; a map whose name starts with one of them (case-insensitive) is added to that mapcycle on upload (`{"pt_all": ["pass_"]}`). Delete removes a map from every mapcycle anyway. Names must appear in `mapcycles`.
 - `website_base_url`: used for the login redirect to the website's Discord OAuth flow
 
 ## Authentication

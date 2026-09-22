@@ -85,6 +85,32 @@ class MapcycleManager:
         
         return is_enabled
     
+    def auto_mapcycles_for(self, filename: str) -> List[str]:
+        """Mapcycles this map belongs in by name prefix, per settings.auto_mapcycles"""
+        lowered = filename.lower()
+        return [
+            mapcycle_name
+            for mapcycle_name, prefixes in settings.auto_mapcycles.items()
+            if any(lowered.startswith(prefix.lower()) for prefix in prefixes)
+        ]
+
+    def add_map_to_auto_mapcycles(self, filename: str) -> List[str]:
+        """
+        Add a freshly uploaded map to every mapcycle its prefix maps to.
+        Idempotent. Returns the mapcycles the map is now in because of this rule.
+        """
+        targets = self.auto_mapcycles_for(filename)
+        if not targets:
+            return []
+
+        map_name = self.get_map_name_without_extension(filename)
+        mapcycles = self.load_mapcycle_state()
+        for mapcycle_name in targets:
+            if map_name not in mapcycles[mapcycle_name]:
+                mapcycles[mapcycle_name].append(map_name)
+        self.save_mapcycle_state(mapcycles)
+        return targets
+
     def is_map_in_mapcycle(self, filename: str, mapcycle_name: str) -> bool:
         """Check if a map is currently in a specific mapcycle"""
         if mapcycle_name not in settings.mapcycles:

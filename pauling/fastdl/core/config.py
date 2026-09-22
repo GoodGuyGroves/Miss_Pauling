@@ -1,5 +1,5 @@
-from pydantic import BaseModel, field_validator, HttpUrl
-from typing import List
+from pydantic import BaseModel, field_validator, model_validator, HttpUrl
+from typing import Dict, List
 from pathlib import Path
 import json
 import os
@@ -21,6 +21,11 @@ class Settings(BaseModel):
     allowed_map_extensions: List[str]
     max_map_file_size: int
     mapcycles: List[str]
+    # Mapcycle name -> filename prefixes. A map whose name starts with one of the
+    # prefixes (case-insensitive) is added to that mapcycle when it is uploaded,
+    # e.g. {"pt_all": ["pass_"]}. Deleting a map removes it from every mapcycle
+    # regardless, and helpers can still toggle it out by hand.
+    auto_mapcycles: Dict[str, List[str]] = {}
     # Where mapcycle membership is persisted. Point at a persistent volume in Kubernetes.
     mapcycle_state_file: str = str(FASTDL_DIR / "mapcycle.json")
     website_base_url: HttpUrl = HttpUrl("http://localhost:8000")
@@ -31,6 +36,13 @@ class Settings(BaseModel):
         v = v.rstrip('/')
         Path(v).mkdir(parents=True, exist_ok=True)
         return v
+
+    @model_validator(mode='after')
+    def validate_auto_mapcycles_reference_known_mapcycles(self):
+        unknown = sorted(set(self.auto_mapcycles) - set(self.mapcycles))
+        if unknown:
+            raise ValueError(f"auto_mapcycles refers to unknown mapcycles: {', '.join(unknown)}")
+        return self
 
     @field_validator('website_base_url', mode='before')
     @classmethod

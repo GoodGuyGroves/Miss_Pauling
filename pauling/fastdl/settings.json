@@ -12,6 +12,11 @@
         "pt_official",
         "pt_all"
     ],
+    "auto_mapcycles": {
+        "pt_all": [
+            "pass_"
+        ]
+    },
     "website_base_url": "https://www.pugs.tf",
     "mapcycle_state_file": "/data/mapcycle.json"
 }

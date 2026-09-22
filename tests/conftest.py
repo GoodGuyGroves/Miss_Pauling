@@ -60,6 +60,9 @@ COOKIE_DOMAIN = ".pugs.tf"
 SESSION_COOKIE = "session_token"
 CSRF_COOKIE = "csrf_token"
 MAPCYCLES = ["pt_official", "pt_all"]
+# Maps whose filename starts with one of these prefixes are added to the named
+# mapcycle automatically on upload (and leave it on delete, like any map).
+AUTO_MAPCYCLES = {"pt_all": ["pass_"]}
 MAX_MAP_MB = 1
 DISCORD_CALLBACK_URL = "https://www.pugs.tf/auth/discord/callback"
 FASTDL_LOGIN_CALLBACK = "https://fastdl.pugs.tf/login/callback"
@@ -86,6 +89,7 @@ _FASTDL_SETTINGS = {
     "allowed_map_extensions": [".bsp"],
     "max_map_file_size": MAX_MAP_MB,
     "mapcycles": list(MAPCYCLES),
+    "auto_mapcycles": AUTO_MAPCYCLES,
     "mapcycle_state_file": str(MAPCYCLE_STATE_FILE),
     "website_base_url": WEBSITE_BASE,
 }

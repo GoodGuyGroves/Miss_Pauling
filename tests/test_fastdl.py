@@ -148,6 +148,7 @@ def test_upload_reports_success_with_filename_and_size(fdl, make_user, map_bytes
         "message": "Uploaded successfully!",
         "filename": "koth_product_rcx.bsp",
         "size": 1500,
+        "mapcycles": [],
     }
 
 
@@ -510,3 +511,97 @@ def test_deleting_non_bsp_file_is_400(fdl, make_user, place_file_in_map_store):
 
     assert response.status_code == 400
     assert response.json()["detail"] == "Invalid map file"
+
+
+# --- 19. automatic mapcycle membership by map prefix ----------------------
+# settings.auto_mapcycles = {"pt_all": ["pass_"]}: every PASS Time map that is
+# uploaded joins pt_all without anyone ticking the box, and leaves it when the
+# map is deleted. Other mapcycles (pt_official) stay manual.
+def test_uploading_a_passtime_map_adds_it_to_pt_all(fdl, make_user, upload_map):
+    user = make_user("user")
+    upload_map(user, "pass_abyss_a4.bsp")
+
+    assert fdl.get("/tf/cfg/mapcycle_pt_all.txt").text == "pass_abyss_a4\n"
+    assert fdl.get("/tf/cfg/mapcycle_pt_official.txt").text == ""
+    item = next(m for m in fdl.get("/maps").json() if m["name"] == "pass_abyss_a4.bsp")
+    assert item["mapcycles"] == {"pt_official": False, "pt_all": True}
+
+
+def test_upload_response_names_the_mapcycles_the_map_was_added_to(fdl, make_user, map_bytes):
+    user = make_user("user")
+    response = fdl.post(
+        "/upload",
+        files={"file": ("pass_aegis_a3.bsp", map_bytes(), "application/octet-stream")},
+        headers=auth(user.token),
+    )
+    assert response.status_code == 200
+    assert response.json()["mapcycles"] == ["pt_all"]
+
+
+def test_uploading_a_non_passtime_map_joins_no_mapcycle(fdl, make_user, upload_map, map_bytes):
+    user = make_user("user")
+    upload_map(user, "jump_beef.bsp")
+    response = fdl.post(
+        "/upload",
+        files={"file": ("cp_orange_x3.bsp", map_bytes(), "application/octet-stream")},
+        headers=auth(user.token),
+    )
+    assert response.json()["mapcycles"] == []
+    assert fdl.get("/tf/cfg/mapcycle_pt_all.txt").text == ""
+    assert fdl.get("/tf/cfg/mapcycle_pt_official.txt").text == ""
+
+
+def test_prefix_match_is_case_insensitive_and_anchored(fdl, make_user, upload_map):
+    user = make_user("user")
+    upload_map(user, "PASS_Uppercase_v1.bsp")
+    upload_map(user, "koth_bypass_b2.bsp")  # contains "pass" but does not start with "pass_"
+
+    assert fdl.get("/tf/cfg/mapcycle_pt_all.txt").text == "PASS_Uppercase_v1\n"
+
+
+def test_deleting_a_passtime_map_removes_it_from_pt_all(fdl, make_user, upload_map):
+    helper = make_user("helper")
+    upload_map(helper, "pass_abyss_a4.bsp")
+    upload_map(helper, "pass_aegis_a3.bsp")
+    assert fdl.get("/tf/cfg/mapcycle_pt_all.txt").text == "pass_abyss_a4\npass_aegis_a3\n"
+
+    response = fdl.delete("/maps/pass_abyss_a4.bsp", headers=auth(helper.token))
+    assert response.status_code == 200
+
+    assert fdl.get("/tf/cfg/mapcycle_pt_all.txt").text == "pass_aegis_a3\n"
+
+
+def test_helper_can_still_remove_an_auto_added_map_from_pt_all(fdl, make_user, upload_map):
+    helper = make_user("helper")
+    upload_map(helper, "pass_abyss_a4.bsp")
+
+    response = fdl.post(
+        "/maps/pass_abyss_a4.bsp/mapcycle", params={"name": "pt_all"}, headers=auth(helper.token)
+    )
+    assert response.status_code == 200
+    assert response.json()["in_mapcycle"] is False
+    assert fdl.get("/tf/cfg/mapcycle_pt_all.txt").text == ""
+
+
+def test_skipped_duplicate_upload_does_not_re_add_a_removed_map(fdl, make_user, upload_map, map_bytes):
+    helper = make_user("helper")
+    upload_map(helper, "pass_abyss_a4.bsp")
+    fdl.post("/maps/pass_abyss_a4.bsp/mapcycle", params={"name": "pt_all"}, headers=auth(helper.token))
+    assert fdl.get("/tf/cfg/mapcycle_pt_all.txt").text == ""
+
+    response = fdl.post(
+        "/upload",
+        files={"file": ("pass_abyss_a4.bsp", map_bytes(), "application/octet-stream")},
+        headers=auth(helper.token),
+    )
+    assert response.json()["status"] == "skipped"
+    assert fdl.get("/tf/cfg/mapcycle_pt_all.txt").text == ""
+
+
+def test_auto_added_map_is_not_duplicated_in_the_mapcycle_file(fdl, make_user, upload_map):
+    helper = make_user("helper")
+    upload_map(helper, "pass_abyss_a4.bsp")
+    fdl.delete("/maps/pass_abyss_a4.bsp", headers=auth(helper.token))
+    upload_map(helper, "pass_abyss_a4.bsp")
+
+    assert fdl.get("/tf/cfg/mapcycle_pt_all.txt").text == "pass_abyss_a4\n"

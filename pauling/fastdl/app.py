@@ -95,12 +95,18 @@ async def upload_map(file: UploadFile = File(...)):
         async with aiofiles.open(file_path, 'wb') as f:
             while chunk := await file.read(1024 * 1024):
                 await f.write(chunk)
-        
+
+        # e.g. pass_* maps go straight into pt_all (settings.auto_mapcycles)
+        auto_mapcycles = mapcycle_manager.add_map_to_auto_mapcycles(file.filename)
+        if auto_mapcycles:
+            print(f"MAPCYCLE AUTO-ADD: {file.filename} added to {', '.join(auto_mapcycles)} on upload")
+
         return {
             "status": "success",
             "message": f"Uploaded successfully!",
             "filename": file.filename,
-            "size": file_size
+            "size": file_size,
+            "mapcycles": auto_mapcycles
         }
     except Exception as e:
         if file_path.exists():
